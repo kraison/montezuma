@@ -79,7 +79,7 @@
    (index-lock :initform (make-rw-lock) :accessor index-lock)
    (writer)
    (close-dir-p)
-   (auto-flush-p)
+   (auto-flush-p :initform t :accessor auto-flush-p :initarg :auto-flush-p)
    (default-search-field :initform "*" :accessor default-search-field)
    (document-title :initform nil :initarg :document-title :accessor document-title)
    (default-field)
