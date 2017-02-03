@@ -360,13 +360,53 @@
   (ensure-writer-open self)
   (slot-value self 'writer))
 
-(defmethod exists-p ((self index) query)
-  (with-searcher (self)
-    (search-each searcher query
-                 #'(lambda (doc score)
-                     (declare (ignore score))
-                     (return-from exists-p doc))))
-  nil)
+(defmacro with-reader ((index) &body body)
+  (with-gensyms (i)
+    `(let ((,i ,index))
+       (with-read-lock ((index-lock ,i))
+         (let ((reader (reader ,i)))
+           (unwind-protect
+                (progn ,@body)
+             (release-reader ,i reader)))))))
+
+(defmacro with-searcher ((index) &body body)
+  (with-gensyms (i)
+    `(let ((,i ,index))
+       (with-read-lock ((index-lock ,i))
+         (let ((searcher (searcher ,i)))
+           (unwind-protect
+                (progn ,@body)
+             (release-reader ,i (reader searcher))))))))
+
+(defmacro with-writer ((index) &body body)
+  (with-gensyms (i)
+    `(let ((,i ,index))
+       (with-write-lock ((index-lock ,i))
+         (let ((writer (writer ,i)))
+           (progn ,@body))))))
+;;           (unwind-protect
+;;                (progn ,@body)
+;;             (close-down writer)))))))
+
+(defmacro with-modifier ((index) &body body)
+  (with-gensyms (i)
+    `(let ((,i ,index))
+       (with-write-lock ((index-lock ,i))
+         (let ((modifier (reader ,i)))
+           (unwind-protect
+                (progn ,@body)
+             ;;(release-reader ,i modifier)))))))
+             (release-modifying-reader ,i modifier)))))))
+
+(defmacro with-modifying-searcher ((index) &body body)
+  (with-gensyms (i)
+    `(let ((,i ,index))
+       (with-write-lock ((index-lock ,i))
+         (let ((searcher (searcher ,i)))
+           (unwind-protect
+                (progn ,@body)
+             ;;(release-reader ,i (reader searcher))))))))
+             (release-modifying-reader ,i searcher)))))))
 
 (defgeneric add-document-to-index (index doc &key overwrite analyzer))
 
@@ -452,53 +492,13 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
           (return)))
     (total-hits hits)))
 
-(defmacro with-reader ((index) &body body)
-  (with-gensyms (i)
-    `(let ((,i ,index))
-       (with-read-lock ((index-lock ,i))
-         (let ((reader (reader ,i)))
-           (unwind-protect
-                (progn ,@body)
-             (release-reader ,i reader)))))))
-
-(defmacro with-searcher ((index) &body body)
-  (with-gensyms (i)
-    `(let ((,i ,index))
-       (with-read-lock ((index-lock ,i))
-         (let ((searcher (searcher ,i)))
-           (unwind-protect
-                (progn ,@body)
-             (release-reader ,i (reader searcher))))))))
-
-(defmacro with-writer ((index) &body body)
-  (with-gensyms (i)
-    `(let ((,i ,index))
-       (with-write-lock ((index-lock ,i))
-         (let ((writer (writer ,i)))
-           (progn ,@body))))))
-;;           (unwind-protect
-;;                (progn ,@body)
-;;             (close-down writer)))))))
-
-(defmacro with-modifier ((index) &body body)
-  (with-gensyms (i)
-    `(let ((,i ,index))
-       (with-write-lock ((index-lock ,i))
-         (let ((modifier (reader ,i)))
-           (unwind-protect
-                (progn ,@body)
-             ;;(release-reader ,i modifier)))))))
-             (release-modifying-reader ,i modifier)))))))
-
-(defmacro with-modifying-searcher ((index) &body body)
-  (with-gensyms (i)
-    `(let ((,i ,index))
-       (with-write-lock ((index-lock ,i))
-         (let ((searcher (searcher ,i)))
-           (unwind-protect
-                (progn ,@body)
-             ;;(release-reader ,i (reader searcher))))))))
-             (release-modifying-reader ,i searcher)))))))
+(defmethod exists-p ((self index) query)
+  (with-searcher (self)
+    (search-each searcher query
+                 #'(lambda (doc score)
+                     (declare (ignore score))
+                     (return-from exists-p doc))))
+  nil)
 
 (defmethod get-document ((self index) id)
   (with-reader (self)
