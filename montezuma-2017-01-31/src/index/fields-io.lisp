@@ -28,7 +28,7 @@
     (close-down fields-stream)
     (close-down index-stream)))
 
-(defmethod get-document ((self fields-reader) n)
+(defmethod get-document ((self fields-reader) n &key &allow-other-keys)
   (with-slots (index-stream fields-stream field-infos) self
     (seek index-stream (* n 8))
     (let ((position (read-long index-stream)))

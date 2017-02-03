@@ -500,15 +500,19 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
                      (return-from exists-p doc))))
   nil)
 
-(defmethod get-document ((self index) id)
-  (with-reader (self)
-    (typecase id
-      (string
-       (get-document-with-term reader (make-term "id" id)))
-      (term
-       (get-document-with-term reader id))
-      (T
-       (get-document reader id)))))
+(defmethod get-document ((self index) id &key reader)
+  (flet ((get-it (r)
+           (typecase id
+             (string
+              (get-document-with-term r (make-term "id" id)))
+             (term
+              (get-document-with-term r id))
+             (T
+              (get-document r id)))))
+    (if reader
+        (get-it reader)
+        (with-reader (self)
+          (get-it reader)))))
 
 (defun make-field-value-query (field value)
   (let ((query (make-instance 'boolean-query)))
@@ -598,10 +602,11 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
       (let ((reader (reader searcher))
             (query (process-query self query)))
         (search-each
-         searcher query
+         searcher
+         query
          #'(lambda (id score)
              (declare (ignore score))
-             (let ((document (get-document self id)))
+             (let ((document (get-document self id :reader (reader searcher))))
                (when (listp new-val)
                  (setf new-val (convert-alist-to-table new-val)))
                (cond ((table-like-p new-val)

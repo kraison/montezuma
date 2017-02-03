@@ -44,6 +44,6 @@
 (defgeneric terms-from (source term))
 (defgeneric terms (term-infos-reader))
 
-(defgeneric get-document (index doc-number))
+(defgeneric get-document (index doc-number &key &allow-other-keys))
 
 (defgeneric has-deletions-p (index-reader))

@@ -8,7 +8,7 @@
    (ones)
    (norms-cache :initform (make-table :test #'equal))
    (has-deletions-p :initform NIL)))
-   
+
 
 (defmacro with-sub-reader ((sub-reader-var start-var) multi-reader n &body body)
   (with-gensyms (index-var)
@@ -18,7 +18,7 @@
 	      (,start-var (- ,n (aref (slot-value self 'starts) ,index-var))))
 	 ,@body))))
 
-	 
+
 
 (defmethod initialize-instance :around ((self multi-reader) &key directory sub-readers)
   (if directory
@@ -50,7 +50,7 @@
       (setf num-docs (reduce #'+ sub-readers :key #'num-docs)))
     num-docs))
 
-(defmethod get-document ((self multi-reader) n)
+(defmethod get-document ((self multi-reader) n &key &allow-other-keys)
   (unless (minusp n)
     (with-sub-reader (sub-reader start) self n
       (get-document sub-reader start))))

@@ -42,7 +42,7 @@
             (term-doc-freq self (aref terms i))))
     (values result)))
 
-(defmethod get-document ((self index-searcher) index)
+(defmethod get-document ((self index-searcher) index &key &allow-other-keys)
   ;; delegate
   (get-document (reader self) index))
 

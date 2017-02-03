@@ -158,7 +158,7 @@
 (defmethod terms-from ((self segment-reader) term)
   (terms-from (slot-value self 'term-infos) term))
 
-(defmethod get-document ((self segment-reader) n)
+(defmethod get-document ((self segment-reader) n &key &allow-other-keys)
   (when (deleted-p self n)
     (error "Document ~S in ~S has been deleted." n self))
   (get-document (slot-value self 'fields-reader) n))
