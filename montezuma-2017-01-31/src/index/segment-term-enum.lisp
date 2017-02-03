@@ -84,9 +84,21 @@
 
 (defgeneric scan-to (segment-term-enum term))
 
+#|
+
+What should happen when we run out of terms? reanz1959@gmail.com
+
 (defmethod scan-to ((self segment-term-enum) term)
   (with-slots (term-buffer) self
     (while (and (term> term (to-term term-buffer)) (next? self)))))
+|#
+
+(defmethod scan-to ((self segment-term-enum) term)
+  (with-slots (term-buffer) self
+    (while (and (term> term
+                       (or (to-term term-buffer)
+                           (return-from scan-to)))
+                (next? self)))))
 
 (defmethod term ((self segment-term-enum))
   (with-slots (term-buffer) self

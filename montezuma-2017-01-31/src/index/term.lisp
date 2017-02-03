@@ -60,19 +60,25 @@
   (and (string= (term-field t1) (term-field t2))
        (string= (term-text t1) (term-text t2))))
 
-(defun term< (t1 t2)
+(defmethod term< ((t1 term) (t2 term))
   (let ((f1 (term-field t1))
 	(f2 (term-field t2)))
     (if (string= f1 f2)
 	(string< (term-text t1) (term-text t2))
-	(string< f1 f2))))
+      (string< f1 f2))))
 
-(defun term> (t1 t2)
+(defmethod term< (t1 t2)
+  (break "We shouldn't be here. Both t1 and t2 must be of type MONTEZUMA:TERM"))
+
+(defmethod term> ((t1 term) (t2 term))
   (let ((f1 (term-field t1))
 	(f2 (term-field t2)))
     (if (string= f1 f2)
 	(string> (term-text t1) (term-text t2))
-	(string> f1 f2))))
+      (string> f1 f2))))
+
+(defmethod term> (t1 t2)
+  (break "We shouldn't be here. Both t1 and t2 must be of type MONTEZUMA:TERM"))
 
 (defgeneric to-string (term))
 

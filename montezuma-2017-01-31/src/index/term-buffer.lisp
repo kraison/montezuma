@@ -11,7 +11,7 @@
   (print-unreadable-object (self stream :type T :identity T)
     (with-slots (field text-buf text-length) self
       (format stream "field:~S text:~S"
-	      field
+	      field 
 	      (if (not (< text-length 0))
 		  (subseq text-buf 0 text-length)
 		  nil)))))
@@ -76,7 +76,7 @@
 	(setf text-cache nil)
 	(setf field (term-field term))
 	(setf (slot-value self 'term) term))))
-
+      
 
 (defgeneric to-term (term-buffer))
 
@@ -84,9 +84,8 @@
   (with-slots (field term text-buf text-length) self
     (if (null field)
 	nil
-	(if (not (null term))
-	    term
-	    (setf term (make-term field (subseq text-buf 0 text-length)))))))
+      (or term
+          (setf term (make-term field (subseq text-buf 0 text-length)))))))
 
 (defmethod term ((self term-buffer))
   (to-term self))
@@ -149,3 +148,4 @@
   (and (string= (term-text t1) (slot-value t2 'text-buf)
 		:start2 0 :end2 (slot-value t2 'text-length))
        (string= (term-field t1) (field t2))))
+		  
