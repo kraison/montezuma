@@ -182,7 +182,7 @@
       (setf (get-index-option options :create-p) NIL)
       (setf close-dir-p (get-index-option options :close-directory-p))
       (setf (get-index-option options :close-directory-p) NIL)
-      (setf auto-flush-p (get-index-option options :auto-flush-p))
+      ;;(setf auto-flush-p (get-index-option options :auto-flush-p))
       (setf default-search-field (or (get-index-option options :default-search-field)
 				     (get-index-option options :default-field)
 				     "*"))
