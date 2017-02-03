@@ -717,11 +717,7 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
         (push reader in-use-readers)
         reader))))
 
-(defmethod release-reader ((self index) (reader index-reader))
-  (bordeaux-threads:with-recursive-lock-held ((readers-lock self))
-    (close-down reader)
-    (setf (in-use-readers self)
-          (remove reader (in-use-readers self)))))
+(defgeneric release-reader (index index-reader))
 
 (defmethod ensure-reader-open ((self index))
   (with-slots (open-p writer readers dir readers-lock) self
