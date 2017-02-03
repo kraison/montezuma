@@ -11,7 +11,7 @@
 	   expected
 	   #'set=
 	   (format T "~&Expected ~S, got ~S, query was ~S." expected (reverse results) query))))
-    
+
 
 (defun do-test-index-with-array (index)
   (let ((data '(#("one two")
@@ -24,8 +24,9 @@
 		#("two" "three" "four" "five"))))
     (dolist (doc data)
       (add-document-to-index index doc))
+    (flush index)
     (atest index-with-array-1 (size index) 8)
-    
+
     ;; FIXME: We don't have a query language parser to handle these
     ;; yet, so fake it.
     ;; (check-query-results index "one" '(0 1 3 4 6))
@@ -142,7 +143,7 @@
 	(optimize-index index)
 	;; REA: not getting expected result: (check-query-results index query '(6 7))
         )
-      (let ((te (make-term "field2" "three"))) 
+      (let ((te (make-term "field2" "three")))
 	(delete-document index te))
       (atest index-with-table-11 (deleted-p index 1) T #'bool=)
       (atest index-with-table-12 (deleted-p index 3) NIL #'bool=)
