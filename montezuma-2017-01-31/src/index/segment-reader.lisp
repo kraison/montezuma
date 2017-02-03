@@ -31,22 +31,24 @@
     (let ((dir index-directory))
       (when (uses-compound-file-p info)
 	(setf cfs-reader (make-instance 'compound-file-reader
-                                        :id id
+                                        ;;:id id
 					:directory index-directory
 					:file-name (add-file-extension segment "cfs")))
 	(setf dir cfs-reader))
       (setf field-infos (make-instance 'field-infos
-                                       :id id
+                                       ;;:id id
 				       :directory dir
-				       :name (add-file-extension (format nil "~A_~A" segment id)
-                                                                 "fnm")))
+				       :name (add-file-extension
+                                              ;;(format nil "~A_~A" segment id)
+                                              segment
+                                              "fnm")))
       (setf fields-reader (make-instance 'fields-reader
 					 :directory dir
-                                         :id id
+                                         ;;:id id
 					 :segment segment
 					 :field-infos field-infos))
       (setf term-infos (make-instance 'term-infos-reader
-                                      :id id
+                                      ;;:id id
 				      :directory dir
 				      :segment segment
 				      :field-infos field-infos))
@@ -57,8 +59,10 @@
 	(setf deleted-docs
               (read-bit-vector index-directory
                                (add-file-extension segment "del"))))
-      (setf freq-stream (open-segment-file dir (format nil "~A_~A" segment id) "frq" :input))
-      (setf prox-stream (open-segment-file dir (format nil "~A_~A" segment id) "prx" :input))
+      ;;(setf freq-stream (open-segment-file dir (format nil "~A_~A" segment id) "frq" :input))
+      ;;(setf prox-stream (open-segment-file dir (format nil "~A_~A" segment id) "prx" :input))
+      (setf freq-stream (open-segment-file dir segment "frq" :input))
+      (setf prox-stream (open-segment-file dir segment "prx" :input))
       (setf norms-dirty-p NIL)
       (open-norms self dir)
       (when (has-vectors-p field-infos)
@@ -284,10 +288,12 @@
     (when (and (field-indexed-p fi) (not (field-omit-norms-p fi)))
       (let ((segment (slot-value self 'segment))
 	    (directory (slot-value self 'index-directory)))
-	(let ((file-name (add-file-extension (format nil "~A_~A" segment (id self))
+	(let ((file-name (add-file-extension segment
+                                             ;;(format nil "~A_~A" segment (id self))
                                              (format nil "s~S" (field-number fi)))))
 	  (when (not (file-exists-p directory file-name))
-	    (setf file-name (add-file-extension (format nil "~A_~A" segment (id self))
+	    (setf file-name (add-file-extension segment
+                                                ;;(format nil "~A_~A" segment (id self))
                                                 (format nil "f~S" (field-number fi))))
 	    (setf directory cfs-dir))
 	  (setf (gethash (field-name fi) (slot-value self 'norms))

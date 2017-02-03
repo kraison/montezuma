@@ -117,7 +117,8 @@
     (setf orig-enum
           (make-instance 'segment-term-enum
                          :input (open-input directory
-                                            (format nil "~A_~A.tis" segment id))
+                                            ;;(format nil "~A_~A.tis" segment id))
+                                            (format nil "~A.tis" segment))
                          :field-infos field-infos
                          :is-index nil))
     (setf size (size orig-enum))
@@ -125,7 +126,8 @@
     (setf index-enum
           (make-instance 'segment-term-enum
                          :input (open-input directory
-                                            (format nil "~A_~A.tii" segment id))
+                                            ;;(format nil "~A_~A.tii" segment id))
+                                            (format nil "~A.tii" segment))
                          :field-infos field-infos
                          :is-index t))))
 

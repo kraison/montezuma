@@ -35,13 +35,7 @@
   ;;(care-when-finalized self)
   )
 
-(defmethod release-reader ((self index) (reader index-reader))
-  (bordeaux-threads:with-recursive-lock-held ((readers-lock self))
-    ;;(close-down reader)
-    (setf (in-use-readers self)
-          (remove reader (in-use-readers self)))
-    (enqueue (readers self) reader))
-  (bt-semaphore:signal-semaphore (readers-semaphore self) 1))
+(defgeneric release-reader (index index-reader))
 
 ;; We assume that anyone calling this already has the rw-lock
 (defun open-index-reader (directory &key (close-directory-p T) (infos nil) id)
@@ -55,11 +49,12 @@
   (if (= (size infos) 1)
       (get-segment-reader (segment-info infos 0)
                           :infos infos
-                          :id id
+                          ;;:id id
                           :close-directory-p close-directory-p)
       (let ((readers (make-array (size infos))))
 	(dotimes (i (size infos))
-	  (setf (aref readers i) (get-segment-reader (segment-info infos i) :id id)))
+	  ;;(setf (aref readers i) (get-segment-reader (segment-info infos i) :id id)))
+	  (setf (aref readers i) (get-segment-reader (segment-info infos i))))
 	(make-instance 'multi-reader
 		       :sub-readers readers
 		       :directory directory

@@ -160,7 +160,7 @@
                      (:file "document-writer"     :depends-on ("index-writer"))
                      (:file "segment-merger"      :depends-on ("index-filenames" "index-writer" "fields-io" "term-buffer"))
                      (:file "index-reader"        :depends-on ("api"))
-                     (:file "index"               :depends-on ("api" "term" "rw-lock")))
+                     (:file "index"               :depends-on ("api" "index-reader" "term" "rw-lock")))
         :depends-on ("package" "analysis" "store" "util"))))))
 
 (defmethod perform ((o test-op) (c (eql (find-system '#:montezuma))))

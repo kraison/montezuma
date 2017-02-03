@@ -7,30 +7,26 @@
 
 (defclass compound-file-reader (virtual-directory)
   ((compound-directory :initarg :directory)
-   (id :initform 0 :accessor id :initarg :id)
    (file-name :initarg :file-name)
    (stream)
    (entries :initform (make-table :test #'equal))))
 
 (defmethod initialize-instance :after ((self compound-file-reader) &key)
-  (with-slots (stream compound-directory file-name entries id) self
+  (with-slots (stream compound-directory file-name entries) self
     (let ((success NIL))
-      (unwind-protect
+      (unwind-protect 
 	   (progn
 	     (setf stream (open-input compound-directory file-name))
 	     (let ((count (read-vint stream))
 		   (entry nil))
 	       (dotimes (i count)
 		 (let ((offset (read-long stream))
-		       (file-id (read-string stream)))
-                   (destructuring-bind (file ext)
-                       (split-sequence:split-sequence #\. file-id)
-                     (setq file-id (format nil "~A_~A.~A" file id ext)))
+		       (id (read-string stream)))
 		   (unless (null entry)
 		     (setf (size entry) (- offset (offset entry))))
 		   (setf entry (make-instance 'compound-file-reader-file-entry
 					      :offset offset))
-		   (setf (table-value entries file-id) entry)))
+		   (setf (table-value entries id) entry)))
 	       (unless (null entry)
 		 (setf (size entry) (- (size stream) (offset entry))))
 	       (setf success T)))
@@ -89,7 +85,7 @@
 (defmethod rename-directory-file ((self compound-file-reader) from to)
   (declare (ignore from to))
   (error "~S does not support ~S." 'compound-file-reader 'rename-directory-file))
-
+  
 (defmethod create-output ((self compound-file-reader) name)
   (declare (ignore name))
   (error "~S does not support ~S." 'compound-file-reader 'create-output))
@@ -108,7 +104,7 @@
   (assert (slot-boundp self 'base))
   (assert (slot-boundp self 'file-offset))
   (assert (slot-boundp self 'size)))
-
+  
 (defmethod close-down ((self cs-index-input))
   )
 
@@ -197,3 +193,7 @@
 	       (when (not (= diff length))
 		 (error "Different in the input file offsets does not match the original file length."))))
 	(close-down is)))))
+
+      
+		 
+	     

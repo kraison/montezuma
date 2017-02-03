@@ -456,7 +456,7 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
   (with-gensyms (i)
     `(let ((,i ,index))
        (with-read-lock ((index-lock ,i))
-         (let ((reader (reader self)))
+         (let ((reader (reader ,i)))
            (unwind-protect
                 (progn ,@body)
              (release-reader ,i reader)))))))
@@ -465,7 +465,7 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
   (with-gensyms (i)
     `(let ((,i ,index))
        (with-read-lock ((index-lock ,i))
-         (let ((searcher (searcher self)))
+         (let ((searcher (searcher ,i)))
            (unwind-protect
                 (progn ,@body)
              (release-reader ,i (reader searcher))))))))
@@ -474,7 +474,7 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
   (with-gensyms (i)
     `(let ((,i ,index))
        (with-write-lock ((index-lock ,i))
-         (let ((writer (writer self)))
+         (let ((writer (writer ,i)))
            (progn ,@body))))))
 ;;           (unwind-protect
 ;;                (progn ,@body)
@@ -484,19 +484,21 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
   (with-gensyms (i)
     `(let ((,i ,index))
        (with-write-lock ((index-lock ,i))
-         (let ((modifier (reader self)))
+         (let ((modifier (reader ,i)))
            (unwind-protect
                 (progn ,@body)
-             (release-reader ,i modifier)))))))
+             ;;(release-reader ,i modifier)))))))
+             (release-modifying-reader ,i modifier)))))))
 
 (defmacro with-modifying-searcher ((index) &body body)
   (with-gensyms (i)
     `(let ((,i ,index))
        (with-write-lock ((index-lock ,i))
-         (let ((searcher (searcher self)))
+         (let ((searcher (searcher ,i)))
            (unwind-protect
                 (progn ,@body)
-             (release-reader ,i (reader searcher))))))))
+             ;;(release-reader ,i (reader searcher))))))))
+             (release-modifying-reader ,i searcher)))))))
 
 (defmethod get-document ((self index) id)
   (with-reader (self)
@@ -709,6 +711,22 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
 
 (defgeneric ensure-reader-open (index))
 
+(defmethod release-reader ((self index) (reader index-reader))
+  (bordeaux-threads:with-recursive-lock-held ((readers-lock self))
+    ;;(close-down reader)
+    (setf (in-use-readers self)
+          (remove reader (in-use-readers self)))
+    (enqueue (readers self) reader))
+  (bt-semaphore:signal-semaphore (readers-semaphore self) 1))
+
+(defmethod release-modifying-reader ((self index) (reader index-reader))
+  (bordeaux-threads:with-recursive-lock-held ((readers-lock self))
+    ;;(close-down reader)
+    (setf (in-use-readers self)
+          (remove reader (in-use-readers self)))
+    (close-down reader))
+  (bt-semaphore:signal-semaphore (readers-semaphore self) 1))
+
 (defmethod get-reader ((self index))
   (with-slots (in-use-readers dir readers-semaphore) self
     (when (bt-semaphore:wait-on-semaphore readers-semaphore)
@@ -721,8 +739,6 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
                                      :id (next-reader-id))))
           (push reader in-use-readers)
           reader)))))
-
-(defgeneric release-reader (index index-reader))
 
 (defmethod ensure-reader-open ((self index))
   (with-slots (open-p writer readers dir readers-lock) self
