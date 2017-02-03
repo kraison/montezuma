@@ -24,7 +24,6 @@
 		#("two" "three" "four" "five"))))
     (dolist (doc data)
       (add-document-to-index index doc))
-    (flush index)
     (atest index-with-array-1 (size index) 8)
 
     ;; FIXME: We don't have a query language parser to handle these

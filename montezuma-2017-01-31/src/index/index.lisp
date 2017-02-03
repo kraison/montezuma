@@ -406,7 +406,7 @@
            (unwind-protect
                 (progn ,@body)
              ;;(release-reader ,i (reader searcher))))))))
-             (release-modifying-reader ,i searcher)))))))
+             (release-modifying-reader ,i (reader searcher))))))))
 
 (defgeneric add-document-to-index (index doc &key overwrite analyzer))
 
@@ -560,36 +560,35 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
 
 (defmethod update ((self index) id new-val)
   (with-slots (options index-lock) self
-    (with-write-lock (index-lock)
-      (cond ((stringp id)
-             ;; FIXME: how about using a pre-parsed form of query?
-             (query-update self (format nil "id:~A" id) new-val))
-            ((typep id 'term)
-             (query-update self
-                           (make-instance 'term-query
-                                          :term id)
-                           new-val))
-            ((integerp id)
-             (let ((document (get-document self id)))
-               (with-modifier (self)
-                 (when (listp new-val)
-                   (setf new-val (convert-alist-to-table new-val)))
-                 (cond ((table-like-p new-val)
-                        (dolist (name (table-keys new-val))
-                          (let ((content (table-value new-val name)))
-                            (setf (document-values document name) (string content)))))
-                       ((typep new-val 'document)
-                        (setf document new-val))
-                       (T
-                        (setf (document-values document (get-index-option options :default-field))
-                              (string new-val))))
-                 (delete-document modifier id))
-               (with-writer (self)
-                 (add-document-to-index-writer writer document))))
-            (T
-             (error "Cannot update for id ~S" id)))
-      (when (slot-value self 'auto-flush-p)
-        (flush self)))))
+    (cond ((stringp id)
+           ;; FIXME: how about using a pre-parsed form of query?
+           (query-update self (format nil "id:~A" id) new-val))
+          ((typep id 'term)
+           (query-update self
+                         (make-instance 'term-query
+                                        :term id)
+                         new-val))
+          ((integerp id)
+           (let ((document (get-document self id)))
+             (with-modifier (self)
+               (when (listp new-val)
+                 (setf new-val (convert-alist-to-table new-val)))
+               (cond ((table-like-p new-val)
+                      (dolist (name (table-keys new-val))
+                        (let ((content (table-value new-val name)))
+                          (setf (document-values document name) (string content)))))
+                     ((typep new-val 'document)
+                      (setf document new-val))
+                     (T
+                      (setf (document-values document (get-index-option options :default-field))
+                            (string new-val))))
+               (delete-document modifier id))
+             (with-writer (self)
+               (add-document-to-index-writer writer document))))
+          (T
+           (error "Cannot update for id ~S" id)))
+    (when (slot-value self 'auto-flush-p)
+      (flush self))))
 
 (defgeneric query-update (index query new-val))
 
@@ -667,7 +666,7 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
 (defmethod add-indexes ((self index) &rest indexes)
   (when (> (length indexes) 0)
     (when (typep (elt indexes 0) 'index)
-      (setf indexes (map 'vector #'reader indexes)))
+      (setf indexes (map 'list #'reader indexes)))
     (with-writer (self)
       (cond ((typep (elt indexes 0) 'index-reader)
              (let ((reader (reader self)))
