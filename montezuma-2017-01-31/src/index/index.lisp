@@ -74,6 +74,7 @@
    (max-readers :initform 10 :initarg :max-readers :accessor max-readers)
    (readers :initform (make-queue) :accessor readers)
    (in-use-readers :initform nil :accessor in-use-readers)
+   (readers-semaphore :initform (bt-semaphore:make-semaphore :count 10) :reader readers-semaphore)
    (readers-lock :initform (bordeaux-threads:make-recursive-lock) :accessor readers-lock)
    (index-lock :initform (make-rw-lock) :accessor index-lock)
    (writer)
@@ -150,7 +151,10 @@
     (with-slots (index-key document-key dir options close-dir-p auto-flush-p analyzer writer
                            default-search-field default-field document-root
                      field-definitions ;; abridgement-threshold
+                     max-readers readers-semaphore
                      retrieved-fields title url name language) self
+      (setf readers-semaphore (bt-semaphore:make-semaphore :count max-readers))
+
       (setf index-key (get-index-option options :index-key))
       (setf document-key (get-index-option options :document-key))
 
@@ -706,16 +710,17 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
 (defgeneric ensure-reader-open (index))
 
 (defmethod get-reader ((self index))
-  (with-slots (in-use-readers dir) self
-    (bordeaux-threads:with-recursive-lock-held ((readers-lock self))
-      (let ((reader (dequeue (readers self))))
-        (when (or (null reader) (and reader (not (latest-p reader))))
-          (setq reader
-                (open-index-reader dir
-                                   :close-directory-p NIL
-                                   :id (next-reader-id))))
-        (push reader in-use-readers)
-        reader))))
+  (with-slots (in-use-readers dir readers-semaphore) self
+    (when (bt-semaphore:wait-on-semaphore readers-semaphore)
+      (bordeaux-threads:with-recursive-lock-held ((readers-lock self))
+        (let ((reader (dequeue (readers self))))
+          (when (or (null reader) (and reader (not (latest-p reader))))
+            (setq reader
+                  (open-index-reader dir
+                                     :close-directory-p NIL
+                                     :id (next-reader-id))))
+          (push reader in-use-readers)
+          reader)))))
 
 (defgeneric release-reader (index index-reader))
 

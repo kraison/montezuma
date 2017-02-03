@@ -37,11 +37,12 @@
 
 (defmethod release-reader ((self index) (reader index-reader))
   (bordeaux-threads:with-recursive-lock-held ((readers-lock self))
-    (close-down reader)
+    ;;(close-down reader)
     (setf (in-use-readers self)
-          (remove reader (in-use-readers self)))))
+          (remove reader (in-use-readers self)))
+    (enqueue (readers self) reader))
+  (bt-semaphore:signal-semaphore (readers-semaphore self) 1))
 
-;; FIXME: locks
 ;; We assume that anyone calling this already has the rw-lock
 (defun open-index-reader (directory &key (close-directory-p T) (infos nil) id)
   (if (null directory)
