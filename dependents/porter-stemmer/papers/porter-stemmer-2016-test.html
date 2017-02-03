@@ -1,0 +1,6082 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Extensions to Porter Stemming for valid stems</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" href="./style.css" />
+<style type="text/css" media="screen">
+/*====================================================
+	- HTML Table Filter stylesheet
+=====================================================*/
+@import "filtergrid.css";
+
+/*====================================================
+	- General html elements
+=====================================================*/
+body{ 
+	margin:15px; padding:15px; border:0px solid #666;
+}
+.mytable{
+	width:98%; font-size:14px;
+        align:center'
+	border:1px solid #ccc;
+}
+caption{ margin:10px 0 0 5px; padding:10px; text-align:left; }
+div.tools{ margin:5px; }
+div.tools input{ background-color:#f4f4f4; border:2px outset #f4f4f4; margin:2px; }
+th{ background-color:#003366; color:#FFF; padding:2px; border:1px solid #ccc; }
+td{ padding:2px; border-bottom:1px solid #ccc; border-right:1px solid #ccc; }
+.tfoot{ background-color:#003366; color:#FFF; padding:2px; border:1px solid #ccc; }
+</style>
+<script language="javascript" type="text/javascript" src="actb.js"></script><!-- External script -->
+<script language="javascript" type="text/javascript" src="tablefilter.js"></script>
+<script language="javascript" type="text/javascript" src =="/code-prettify/ccode-prettifier.js"></script>
+<script language="javascript" type="text/javascript" src="/code-prettify/run_prettify.js"></script>
+
+</head>
+<body onload="prettyPrint()">
+
+<h1 align=center>Extensions to Porter stemming yielding valid stems</h1>
+<h2 align=center>Roy Anderson<br>2016<br></h2>
+
+<h2>ABSTRACT</h2>
+
+<p>This document details developments to Porter Stemmer 1.01 (Common Lisp encoding) referred to in the following as
+Porter<sup>1</sup>, Porter<sup>2</sup> and Porter<sup>3</sup> which aim to increase the success rate of stemming by suffix 
+removal. Porter<sup>2</sup> rewrites some Porter<sup>1</sup> suffix rules and adds a new kind of rule based on word exceptions.
+Porter<sup>3</sup> uses Porter<sup>1</sup> suffix removal but adds a new set of rules which work in conjunction
+with a word validator. 
+The stemming outcomes using a sample of the Porter<sup>2</sup> test file are compared in a parallel.
+In Porter<sup>3</sup>, a valid stem is a member of the set of validated words as determined 
+by a validation function. The original entry point to the stemmer (<code>stem</code>)
+continues to give the Porter<sup>1</sup> results (the shortest word forms) according to stemming rules
+but without reference to valid words. 
+This is handled in Porter<sup>2</sup> by encoding exceptions where the whole input word is tested possibly to bypass
+overly aggressive and blind stemming rules. But Porter<sup>3</sup> introduces a new entry point (<code>stem-to-valid-word</code>) which 
+has a different contract: to find the first valid stem as determined by a supplied <em>validation function</em>.
+ 
+This change was motivated by the need to support general Linguistics applications that need true stems (<em>base forms</em>) 
+while honouring the existing behaviour for Information Retrieval applications based on the Porter<sup>1</sup> Stemming Algorithm. 
+The new version (Porter<sup>3</sup>) has been tested using the original test files (Porter<sup>1</sup> and Porter<sup>2</sup>
+sets of words (see below). Using the <em>validate word</em> function included in Porter<sup>3</sup> there are a minority of
+unrecognised words but most words yield are either valid stems present in the set of valid words or which are
+stemmed to a valid word. When compared in parallel to Porter<sup>1</sup>, Porter<sup>3</sup> not only satisfies the need to
+produce valid stems, but it also satisfies the goal of bringing together inflected word forms to a single base form.</p>
+
+<h2>INTRODUCTION</h2>
+
+<p>Porter<sup>1</sup> reduces groups of terms by condensing them into a single string,
+even if the string is not a valid word (as would be determined by a dictionary lookup). 
+For example, removal of the suffixes -ED, -ING, -ION, IONS
+results in the single term CONNECT which happens to be a valid word.
+On the other hand, removal of the suffixes -E, -ED, -EMENT, -EMENTS from inflected forms of ABATE results
+in the invalid word: ABAT. This is not an error but rather a feature of Porter Stemmer 1.x!
+Suffix stripping is intended to reduce the total number of terms in the information retrieval system, 
+and hence reduces the size and complexity of the data in the system. Again, the purpose of suffix stripping
+is to reduce the number of word forms in a consistent manner.</p>
+
+<p>Porter Stemmer 3.0, in contrast to the original algorithm, introduces stem validation while
+retaining the established stem stripping capacity that has made the Porter Stemmer so popular over the past decades.
+In the Porter Stemmer 3.0 algorithm, the stemming process is negotiated by calls to a word
+validator which can be either supplied by the stemmer, or passed amongst the arguments to the stem routine.</p>
+
+<h2>Stem Validation</h2>
+
+<p>Stem validation profoundly affects the behaviour of the Stemmer. With validation, (Porter<sup>3</sup>)
+output is guaranteed to be either a valid word, or NIL. A NIL return value from the
+validation test does not necessarily mean that a word is a misspelt, but this is a definite possibility.
+Alternatively, the stem form may simply be absent from the set of valid words.
+The following comparison of Porter<sup>1</sup> to Porter<sup>3</sup> using the first 4000 Porter<sup>2</sup>
+<a href='http://snowball.tartarus.org/algorithms/english/diffs.txt'>diffs</a> (two columns, the first is
+the input word and the second is the Porter<sup>2</sup> output) demonstrates the strengths and weaknesses
+of the three interpretations of stemming. The number of sample words (4000) was chosen as a compromise between
+maximizing the sample size and retaining responsiveness of the 
+<a href='http://iaath.gr/enories/examples_EN.htm'>Javascript routines</a> providing table paging
+and column filtering.
+Note that Porter<sup>1</sup> and Porter<sup>2</sup> always return either a stripped word or the input word 
+if no rules can be applied. On the other hand, Porter<sup>3</sup> may return a NIL if
+the stemming rules do not lead to valid word. In addition, Porter<sup>3</sup> may short circuit application of 
+the stemming rules if the validation test returns an early non-NIL result. 
+In the comparison of Porter<sup>1-3</sup>, the following values may appear in the Stemming Outcome Analyses columns:</p>
+<ul>
+
+<li><span class='absent'>absent</span>
+<p>The Stemmer returned NIL because the word is not a valid stem and the stemming rules
+ failed to yield a valid word. The word may be incorrectly spelt or it could be a proper noun that is
+not included in the list of valid words.</p></li>
+
+<li><span class='invalid'>invalid</span>
+<p>The Stemmer returned a word but it's not in the set of valid Porter<sup>3</sup> words.
+Note that Porter<sup>3</sup> returns a NIL value under this condition. It is most likely that this
+would be handled by the caller of the Stemmer by using the input word without stemming.</p></li>
+
+
+<li><span class='irregular'>irregular</span>
+<p>The Stemmer identified a word in the finite list of inflected pairs of irregular word forms. 
+The irregular words do not conform to the usual inflection patterns (e.g. thought/think, or sink/sank)
+so Porter<sup>3</sup> bypasses suffix removal and returns the associated base form.</p></li>
+
+<li><span class='non-alphabetic'>non-alphabetic</span>
+<p>The Stemmer's test for non-alphabetic characters excludes words with any digits, spaces or punctuation.</p></li>
+
+<li><span class='roman-numerals'>roman-numerals</span>
+<p>This is a new outcome in Porter<sup>3</sup> added as an example of a set of words that should not be stemmed.
+The code was derived from a couple of routines found at 
+<a href="https://www.rosettacode.org/wiki/Roman_numerals/Decode">www.rosettacode.org</a>.
+The rosetta code was based on the assumption that the argument is always a well formed string of Roman numerals. 
+It has been modified to return NIL if there are any invalid numerals or if the number is not well formed
+which is determined by encoding the number back to Roman numerals and comparing it to the input.</p></li>
+
+<li><span class='present'>present</span>
+<p>No stemming rules were applied because the word was considered to be valid already.</p></li>
+
+<li><span class='stemmed'>stemmed</span><p>The Stemmer successfully generated a valid stem word which is distinct
+from the input word.</p></li>
+
+<li><span class='stopword'>stopword</span><p>A stopword is a member of the most common words but which
+also do not convey a great deal of meaning. Porter<sup>3</sup> identifies stopwords in a set of words
+that are not stemmed.</p></li>
+
+<li><span class='undersize'>undersize</span>
+<p>No stemming was attempted because the word is too short.
+
+</ul>
+
+<p>The analysis of Porter<sup>1</sup> to Porter<sup>3</sup> stemming outcomes
+over the test sample of 4000 words highlights important differences between the
+approaches: Porter<sup>1</sup> always returns a string, even
+if it does not conform to (Porter<sup>3</sup>) <em>orthographical</em> standards.
+Porter<sup>2</sup> slightly improves the output quality reducing invalid outcomes
+and increasing the number of successfully stemmed words.
+Porter<sup>3</sup> always returns NIL or a valid word as determined by the <em>validator</em>. 
+
+If the validator represents membership of a rich source of words it will tend to be too generous 
+when validating inflected word forms. This is evident in the limited
+sample of results in the Stemming Outcomes: many inflected forms are treated as valid even though they are
+not truly a stemmed base form (i.e. the desired uninflected word form). 
+One solution for this would be to remove non-base forms from those that should be in the set of
+of stem forms. However, this is a major task there being over 100,000 word forms in a typical list
+such as the <a href='http://gcide.gnu.org.ua/'>GCIDE</a> list of entries.
+</p>
+
+<h2>Summary of Stemming Outcomes</h2>
+
+<p id="stemming-summary">Figures 1. and 2. summarise stemming outcomes from the
+<a href='http://snowball.tartarus.org/algorithms/english/diffs.txt'>Porter<sup>2</sup> diffs word list</a>:
+Figure 1 summarises outcomes for the first 4000 words and Figure 2, outcomes for all the test words
+(nearly 30,000 words). 
+The diffs file has two columns: an input word and the Porter<sup>2</sup> output.
+The Porter<sup>1</sup> output was generated from Porter<sup>3</sup> running in Stemmer<sup>1</sup>
+compatiblity mode.
+The Porter<sup>2</sup> algorithm is not available in Common Lisp (at the time of writing)
+but the output in the diffs file is sufficient for the purposes of this comparison. 
+All stemming outcomes have been analysed using a new snippet of Porter<sup>3</sup> code. 
+The 4000 word sample from the diffs across Porter<sup>1, 2, 3</sup> is <a href='#sample-outcomes'>below</a>.</p>
+
+<table class='table' align='center' width='80%'>
+  <caption>Figure 1. Summary of 4000 diffs lines with outcomes from Porter<sup>1, 2 and 3</sup>.</caption>
+  <tr>
+    <th align='left'>Outcome</th>
+    <th align='right'>Porter<sup>1</sup></th>
+    <th align='right'>Porter<sup>2</sup></th>
+    <th align='right'>Porter<sup>3</sup></th>
+    <th align='right'>Porter<sup>1</sup>%</th>
+    <th align='right'>Porter<sup>2</sup>%</th>
+    <th align='right'>Porter<sup>3</sup>%</th>
+  </tr>
+  <tr>
+    <td class='absent'>absent</td>
+    <td align='right'>0</td>
+    <td align='right'>0</td>
+    <td align='right'>526</td>
+    <td align='right'>0%</td>
+    <td align='right'>0%</td>
+    <td align='right'>13%</td>
+  </tr>
+  <tr>
+    <td class='invalid'>invalid</td>
+    <td align='right'>1873</td>
+    <td align='right'>1770</td>
+    <td align='right'>0</td>
+    <td align='right'>47%</td>
+    <td align='right'>44%</td>
+    <td align='right'>0%</td>
+  </tr>
+  <tr>
+    <td class='irregular'>irregular</td>
+    <td align='right'>0</td>
+    <td align='right'>0</td>
+    <td align='right'>73</td>
+    <td align='right'>0%</td>
+    <td align='right'>0%</td>
+    <td align='right'>2%</td>
+  </tr>
+  <tr>
+    <td class='non-alphabetic'>non-alphabetic</td>
+    <td align='right'>14</td>
+    <td align='right'>7</td>
+    <td align='right'>14</td>
+    <td align='right'>0%</td>
+    <td align='right'>0%</td>
+    <td align='right'>0%</td>
+  </tr>
+  <tr>
+    <td class='present'>present</td>
+    <td align='right'>0</td>
+    <td align='right'>0</td>
+    <td align='right'>1460</td>
+    <td align='right'>0%</td>
+    <td align='right'>0%</td>
+    <td align='right'>36%</td>
+  </tr>
+  <tr>
+    <td class='stemmed'>stemmed</td>
+    <td align='right'>2063</td>
+    <td align='right'>2188</td>
+    <td align='right'>1849</td>
+    <td align='right'>52%</td>
+    <td align='right'>55%</td>
+    <td align='right'>46%</td>
+  </tr>
+  <tr>
+    <td class='stopword'>stopword</td>
+    <td align='right'>0</td>
+    <td align='right'>0</td>
+    <td align='right'>56</td>
+    <td align='right'>0%</td>
+    <td align='right'>0%</td>
+    <td align='right'>1%</td>
+  </tr>
+  <tr>
+    <td class='undersize'>undersize</td>
+    <td align='right'>50</td>
+    <td align='right'>35</td>
+    <td align='right'>22</td>
+    <td align='right'>1%</td>
+    <td align='right'>1%</td>
+    <td align='right'>1%</td>
+  </tr>
+  <tr class='tfoot'>
+    <td>Total input words</td>
+    <td colspan=3 align='right'>4000</td>
+    <td colspan=3 align='right'>100%</td>
+  </tr>
+</table>
+
+<p>Figure 2 summarises stemming outcomes over the complete file of Porter<sup>2</sup> diffs.
+Two observations when comparing the 4000 word sample and the complete file of diff words are that
+the ratios of outcomes are reasonably consistent (i.e. Porter<sup>1</sup> to Porter<sup>3</sup> 
+percentages are about the same); secondly, Porter<sup>1</sup> and Porter<sup>2</sup> look very 
+similar: within a few percentage points 
+both reaching 50% success stemming but they also have about 50% invalid results meaning the chances
+are more or less even that the outcomes are not valid words. Porter<sup>3</sup> yields
+very different results. While the stemming rate is comparable to Porter<sup>1 - 2</sup>, the
+new <em>present</em> outcome made possible by the validator function, blocks the Stemmer from 
+returning invalid stems.</p>
+
+<table align='center' width='80%'>
+  <caption>Figure 2. Summary of outcomes for the complete Porter<sup>2</sup> diffs file using Porter<sup>1</sup> 
+to Porter<sup>3</sup>.</caption>
+  <tr>
+    <th align='left'>Outcome</th>
+    <th align='right'>Porter<sup>1</sup></th>
+    <th align='right'>Porter<sup>2</sup></th>
+    <th align='right'>Porter<sup>3</sup></th>
+    <th align='right'>Porter<sup>1</sup>%</th>
+    <th align='right'>Porter<sup>2</sup>%</th>
+    <th align='right'>Porter<sup>3</sup>%</th>
+  </tr>
+  <tr>
+    <td class='absent'>absent</td>
+    <td align='right'>0</td>
+    <td align='right'>0</td>
+    <td align='right'>3432</td>
+    <td align='right'>0%</td>
+    <td align='right'>0%</td>
+    <td align='right'>12%</td>
+  </tr>
+  <tr>
+    <td class='invalid'>invalid</td>
+    <td align='right'>14066</td>
+    <td align='right'>13268</td>
+    <td align='right'>0</td>
+    <td align='right'>48%</td>
+    <td align='right'>45%</td>
+    <td align='right'>0%</td>
+  </tr>
+  <tr>
+    <td class='irregular'>irregular</td>
+    <td align='right'>0</td>
+    <td align='right'>0</td>
+    <td align='right'>508</td>
+    <td align='right'>0%</td>
+    <td align='right'>0%</td>
+    <td align='right'>2%</td>
+  </tr>
+  <tr>
+    <td class='non-alphabetic'>non-alphabetic</td>
+    <td align='right'>14</td>
+    <td align='right'>7</td>
+    <td align='right'>14</td>
+    <td align='right'>0%</td>
+    <td align='right'>0%</td>
+    <td align='right'>0%</td>
+  </tr>
+  <tr>
+    <td class='present'>present</td>
+    <td align='right'>0</td>
+    <td align='right'>0</td>
+    <td align='right'>11143</td>
+    <td align='right'>0%</td>
+    <td align='right'>0%</td>
+    <td align='right'>38%</td>
+  </tr>
+  <tr>
+    <td class='roman-numerals'>roman-numerals</td>
+    <td align='right'>0</td>
+    <td align='right'>0</td>
+    <td align='right'>35</td>
+    <td align='right'>0%</td>
+    <td align='right'>0%</td>
+    <td align='right'>0%</td>
+  </tr>
+  <tr>
+    <td class='stemmed'>stemmed</td>
+    <td align='right'>15037</td>
+    <td align='right'>15931</td>
+    <td align='right'>13740</td>
+    <td align='right'>51%</td>
+    <td align='right'>54%</td>
+    <td align='right'>47%</td>
+  </tr>
+  <tr>
+    <td class='stopword'>stopword</td>
+    <td align='right'>0</td>
+    <td align='right'>0</td>
+    <td align='right'>368</td>
+    <td align='right'>0%</td>
+    <td align='right'>0%</td>
+    <td align='right'>1%</td>
+  </tr>
+  <tr>
+    <td class='undersize'>undersize</td>
+    <td align='right'>300</td>
+    <td align='right'>211</td>
+    <td align='right'>177</td>
+    <td align='right'>1%</td>
+    <td align='right'>1%</td>
+    <td align='right'>1%</td>
+  </tr>
+  <tr class='tfoot'>
+    <td>Total input words</td>
+    <td colspan=3 align='right'>29417</td>
+    <td colspan=3 align='right'>100%</td>
+  </tr>
+  <tr>
+</table>
+
+<h3>Stemming Outcomes</h3>
+
+<p id='sample-outcomes'>Figure 3 details stemming outcomes for the first 4000 
+<a href="http://snowball.tartarus.org/algorithms/english/diffs.txt">diffs words</a> 
+showing the input word and the output from three versions of Porter's Stemming Algorithm.
+A quick glance at the <a href="#stemming-summary">parallel outputs</a> shows 
+that stemming over the complete test file of nearly 30,000 words yields a similar
+pattern of results compared to the first 4000 words and that Porter<sup>1</sup> and Porter<sup>2</sup>
+do not differ strikingly in spite of the many exceptions included in Porter<sup>2</sup>. 
+Porter<sup>3</sup> on the other hand, while having weaknesses, principally
+in the quality of cover and accuracy of the valid word list, is standing up rather well
+compared to its predecessors.</p>
+
+<p>Figure 3. Parallel Stemming Outcomes from Porter<sup>1</sup> to Porter<sup>3</sup>.</p>
+<table id='Outcomes' class='mytable' width='600'>
+  <thead>
+  <tr>
+    <th width='4%' align='left'>Line</th>
+    <th width='10%' align='left'>Input</th>
+    <th width='10%' align='left'>Analysis<sup>1</sup></th>
+    <th width='10%' align='left'>Porter<sup>1</sup></th>
+    <th width='10%' align='left'>Analysis<sup>2</sup></th>
+    <th width='10%' align='left'>Porter<sup>2</sup></th>
+    <th width='10%' align='left'>Analysis<sup>3</sup></th>
+    <th width='10%' align='left'>Porter<sup>3</sup></th>
+  </tr>
+</thead>
+<tbody>
+<tr>
+  <td align='right'>1</td>
+  <td><code>'</code></td>
+  <td class='non-alphabetic'>non-alphabetic</td>
+  <td><code>'</code></td>
+  <td class='non-alphabetic'>non-alphabetic</td>
+  <td><code>'</code></td>
+  <td class='non-alphabetic'>non-alphabetic</td>
+  <td><code>'</code></td>
+</tr>
+<tr>
+  <td align='right'>2</td>
+  <td><code>''</code></td>
+  <td class='non-alphabetic'>non-alphabetic</td>
+  <td><code>''</code></td>
+  <td class='non-alphabetic'>non-alphabetic</td>
+  <td><code>''</code></td>
+  <td class='non-alphabetic'>non-alphabetic</td>
+  <td><code>''</code></td>
+</tr>
+<tr>
+  <td align='right'>3</td>
+  <td><code>'a</code></td>
+  <td class='non-alphabetic'>non-alphabetic</td>
+  <td><code>'a</code></td>
+  <td class='non-alphabetic'>non-alphabetic</td>
+  <td><code>'a</code></td>
+  <td class='non-alphabetic'>non-alphabetic</td>
+  <td><code>'a</code></td>
+</tr>
+<tr>
+  <td align='right'>4</td>
+  <td><code>'s</code></td>
+  <td class='non-alphabetic'>non-alphabetic</td>
+  <td><code>'s</code></td>
+  <td class='non-alphabetic'>non-alphabetic</td>
+  <td><code>'s</code></td>
+  <td class='non-alphabetic'>non-alphabetic</td>
+  <td><code>'s</code></td>
+</tr>
+<tr>
+  <td align='right'>5</td>
+  <td><code>'aa</code></td>
+  <td class='non-alphabetic'>non-alphabetic</td>
+  <td><code>'aa</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>aa</code></td>
+  <td class='non-alphabetic'>non-alphabetic</td>
+  <td><code>'aa</code></td>
+</tr>
+<tr>
+  <td align='right'>6</td>
+  <td><code>'as</code></td>
+  <td class='non-alphabetic'>non-alphabetic</td>
+  <td><code>'as</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>as</code></td>
+  <td class='non-alphabetic'>non-alphabetic</td>
+  <td><code>'as</code></td>
+</tr>
+<tr>
+  <td align='right'>7</td>
+  <td><code>'''</code></td>
+  <td class='non-alphabetic'>non-alphabetic</td>
+  <td><code>'''</code></td>
+  <td class='non-alphabetic'>non-alphabetic</td>
+  <td><code>'</code></td>
+  <td class='non-alphabetic'>non-alphabetic</td>
+  <td><code>'''</code></td>
+</tr>
+<tr>
+  <td align='right'>8</td>
+  <td><code>'a'</code></td>
+  <td class='non-alphabetic'>non-alphabetic</td>
+  <td><code>'a'</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>a</code></td>
+  <td class='non-alphabetic'>non-alphabetic</td>
+  <td><code>'a'</code></td>
+</tr>
+<tr>
+  <td align='right'>9</td>
+  <td><code>'s'</code></td>
+  <td class='non-alphabetic'>non-alphabetic</td>
+  <td><code>'s'</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>s</code></td>
+  <td class='non-alphabetic'>non-alphabetic</td>
+  <td><code>'s'</code></td>
+</tr>
+<tr>
+  <td align='right'>10</td>
+  <td><code>'aa'</code></td>
+  <td class='non-alphabetic'>non-alphabetic</td>
+  <td><code>'aa'</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>aa</code></td>
+  <td class='non-alphabetic'>non-alphabetic</td>
+  <td><code>'aa'</code></td>
+</tr>
+<tr>
+  <td align='right'>11</td>
+  <td><code>'as'</code></td>
+  <td class='non-alphabetic'>non-alphabetic</td>
+  <td><code>'as'</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>as</code></td>
+  <td class='non-alphabetic'>non-alphabetic</td>
+  <td><code>'as'</code></td>
+</tr>
+<tr>
+  <td align='right'>12</td>
+  <td><code>a</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>a</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>a</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>a</code></td>
+</tr>
+<tr>
+  <td align='right'>13</td>
+  <td><code>a'</code></td>
+  <td class='non-alphabetic'>non-alphabetic</td>
+  <td><code>a'</code></td>
+  <td class='non-alphabetic'>non-alphabetic</td>
+  <td><code>a'</code></td>
+  <td class='non-alphabetic'>non-alphabetic</td>
+  <td><code>a'</code></td>
+</tr>
+<tr>
+  <td align='right'>14</td>
+  <td><code>a''</code></td>
+  <td class='non-alphabetic'>non-alphabetic</td>
+  <td><code>a''</code></td>
+  <td class='non-alphabetic'>non-alphabetic</td>
+  <td><code>a'</code></td>
+  <td class='non-alphabetic'>non-alphabetic</td>
+  <td><code>a''</code></td>
+</tr>
+<tr>
+  <td align='right'>15</td>
+  <td><code>aa'</code></td>
+  <td class='non-alphabetic'>non-alphabetic</td>
+  <td><code>aa'</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>aa</code></td>
+  <td class='non-alphabetic'>non-alphabetic</td>
+  <td><code>aa'</code></td>
+</tr>
+<tr>
+  <td align='right'>16</td>
+  <td><code>aback</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>aback</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>aback</code></td>
+  <td class='present'>present</td>
+  <td><code>aback</code></td>
+</tr>
+<tr>
+  <td align='right'>17</td>
+  <td><code>abandon</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abandon</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abandon</code></td>
+  <td class='present'>present</td>
+  <td><code>abandon</code></td>
+</tr>
+<tr>
+  <td align='right'>18</td>
+  <td><code>abandoned</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abandon</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abandon</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abandon</code></td>
+</tr>
+<tr>
+  <td align='right'>19</td>
+  <td><code>abandoning</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abandon</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abandon</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abandon</code></td>
+</tr>
+<tr>
+  <td align='right'>20</td>
+  <td><code>abandonment</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abandon</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abandon</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abandon</code></td>
+</tr>
+<tr>
+  <td align='right'>21</td>
+  <td><code>abandons</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abandon</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abandon</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abandon</code></td>
+</tr>
+<tr>
+  <td align='right'>22</td>
+  <td><code>abasement</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abas</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abas</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abase</code></td>
+</tr>
+<tr>
+  <td align='right'>23</td>
+  <td><code>abashed</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abash</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abash</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abash</code></td>
+</tr>
+<tr>
+  <td align='right'>24</td>
+  <td><code>abate</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abat</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abat</code></td>
+  <td class='present'>present</td>
+  <td><code>abate</code></td>
+</tr>
+<tr>
+  <td align='right'>25</td>
+  <td><code>abated</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abat</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abat</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abate</code></td>
+</tr>
+<tr>
+  <td align='right'>26</td>
+  <td><code>abbey</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abbei</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abbey</code></td>
+  <td class='present'>present</td>
+  <td><code>abbey</code></td>
+</tr>
+<tr>
+  <td align='right'>27</td>
+  <td><code>abbott</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abbott</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abbott</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abbot</code></td>
+</tr>
+<tr>
+  <td align='right'>28</td>
+  <td><code>abbreviation</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abbrevi</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abbrevi</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abbreviate</code></td>
+</tr>
+<tr>
+  <td align='right'>29</td>
+  <td><code>abdicate</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abdic</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abdic</code></td>
+  <td class='present'>present</td>
+  <td><code>abdicate</code></td>
+</tr>
+<tr>
+  <td align='right'>30</td>
+  <td><code>abdicating</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abdic</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abdic</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abdicate</code></td>
+</tr>
+<tr>
+  <td align='right'>31</td>
+  <td><code>abdomen</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abdomen</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abdomen</code></td>
+  <td class='present'>present</td>
+  <td><code>abdomen</code></td>
+</tr>
+<tr>
+  <td align='right'>32</td>
+  <td><code>abdominal</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abdomin</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abdomin</code></td>
+  <td class='present'>present</td>
+  <td><code>abdominal</code></td>
+</tr>
+<tr>
+  <td align='right'>33</td>
+  <td><code>abe</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>ab</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abe</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>ab</code></td>
+</tr>
+<tr>
+  <td align='right'>34</td>
+  <td><code>abear</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abear</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abear</code></td>
+  <td class='present'>present</td>
+  <td><code>abear</code></td>
+</tr>
+<tr>
+  <td align='right'>35</td>
+  <td><code>abed</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>ab</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abe</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>ab</code></td>
+</tr>
+<tr>
+  <td align='right'>36</td>
+  <td><code>abel</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abel</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abel</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abele</code></td>
+</tr>
+<tr>
+  <td align='right'>37</td>
+  <td><code>aberration</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>aberr</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>aberr</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>aberr</code></td>
+</tr>
+<tr>
+  <td align='right'>38</td>
+  <td><code>abershaw</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abershaw</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abershaw</code></td>
+  <td class='absent'>absent</td>
+  <td><code>NIL</code></td>
+</tr>
+<tr>
+  <td align='right'>39</td>
+  <td><code>abet</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abet</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abet</code></td>
+  <td class='present'>present</td>
+  <td><code>abet</code></td>
+</tr>
+<tr>
+  <td align='right'>40</td>
+  <td><code>abettor</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abettor</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abettor</code></td>
+  <td class='present'>present</td>
+  <td><code>abettor</code></td>
+</tr>
+<tr>
+  <td align='right'>41</td>
+  <td><code>abeyance</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abey</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abey</code></td>
+  <td class='present'>present</td>
+  <td><code>abeyance</code></td>
+</tr>
+<tr>
+  <td align='right'>42</td>
+  <td><code>abhorred</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abhor</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abhor</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abhor</code></td>
+</tr>
+<tr>
+  <td align='right'>43</td>
+  <td><code>abhorrence</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abhorr</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abhorr</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abhor</code></td>
+</tr>
+<tr>
+  <td align='right'>44</td>
+  <td><code>abhorring</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abhor</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abhor</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abhor</code></td>
+</tr>
+<tr>
+  <td align='right'>45</td>
+  <td><code>abide</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abid</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abid</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>abide</code></td>
+</tr>
+<tr>
+  <td align='right'>46</td>
+  <td><code>abiding</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abid</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abid</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abid</code></td>
+</tr>
+<tr>
+  <td align='right'>47</td>
+  <td><code>abilities</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abil</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abil</code></td>
+  <td class='absent'>absent</td>
+  <td><code>NIL</code></td>
+</tr>
+<tr>
+  <td align='right'>48</td>
+  <td><code>ability</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abil</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abil</code></td>
+  <td class='present'>present</td>
+  <td><code>ability</code></td>
+</tr>
+<tr>
+  <td align='right'>49</td>
+  <td><code>abimee</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abime</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abime</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abime</code></td>
+</tr>
+<tr>
+  <td align='right'>50</td>
+  <td><code>abingdon</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abingdon</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abingdon</code></td>
+  <td class='absent'>absent</td>
+  <td><code>NIL</code></td>
+</tr>
+<tr>
+  <td align='right'>51</td>
+  <td><code>abipones</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abipon</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abipon</code></td>
+  <td class='absent'>absent</td>
+  <td><code>NIL</code></td>
+</tr>
+<tr>
+  <td align='right'>52</td>
+  <td><code>abject</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abject</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abject</code></td>
+  <td class='present'>present</td>
+  <td><code>abject</code></td>
+</tr>
+<tr>
+  <td align='right'>53</td>
+  <td><code>abjectly</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abjectli</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abject</code></td>
+  <td class='present'>present</td>
+  <td><code>abjectly</code></td>
+</tr>
+<tr>
+  <td align='right'>54</td>
+  <td><code>abjectness</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abject</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abject</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abject</code></td>
+</tr>
+<tr>
+  <td align='right'>55</td>
+  <td><code>abjure</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abjur</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abjur</code></td>
+  <td class='present'>present</td>
+  <td><code>abjure</code></td>
+</tr>
+<tr>
+  <td align='right'>56</td>
+  <td><code>abjured</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abjur</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abjur</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abjure</code></td>
+</tr>
+<tr>
+  <td align='right'>57</td>
+  <td><code>abl</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abl</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abl</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>able</code></td>
+</tr>
+<tr>
+  <td align='right'>58</td>
+  <td><code>able</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abl</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abl</code></td>
+  <td class='present'>present</td>
+  <td><code>able</code></td>
+</tr>
+<tr>
+  <td align='right'>59</td>
+  <td><code>ablutions</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>ablut</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>ablut</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>ablution</code></td>
+</tr>
+<tr>
+  <td align='right'>60</td>
+  <td><code>abnegation</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abneg</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abneg</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abnegate</code></td>
+</tr>
+<tr>
+  <td align='right'>61</td>
+  <td><code>abnormal</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abnorm</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abnorm</code></td>
+  <td class='present'>present</td>
+  <td><code>abnormal</code></td>
+</tr>
+<tr>
+  <td align='right'>62</td>
+  <td><code>abnormality</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abnorm</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abnorm</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abnormal</code></td>
+</tr>
+<tr>
+  <td align='right'>63</td>
+  <td><code>abnormally</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abnorm</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abnorm</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abnormal</code></td>
+</tr>
+<tr>
+  <td align='right'>64</td>
+  <td><code>aboard</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>aboard</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>aboard</code></td>
+  <td class='present'>present</td>
+  <td><code>aboard</code></td>
+</tr>
+<tr>
+  <td align='right'>65</td>
+  <td><code>abode</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abod</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abod</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>abide</code></td>
+</tr>
+<tr>
+  <td align='right'>66</td>
+  <td><code>abodes</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abod</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abod</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abode</code></td>
+</tr>
+<tr>
+  <td align='right'>67</td>
+  <td><code>abolish</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abolish</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abolish</code></td>
+  <td class='present'>present</td>
+  <td><code>abolish</code></td>
+</tr>
+<tr>
+  <td align='right'>68</td>
+  <td><code>abolished</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abolish</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abolish</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abolish</code></td>
+</tr>
+<tr>
+  <td align='right'>69</td>
+  <td><code>abolishing</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abolish</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abolish</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abolish</code></td>
+</tr>
+<tr>
+  <td align='right'>70</td>
+  <td><code>abolition</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abolit</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abolit</code></td>
+  <td class='present'>present</td>
+  <td><code>abolition</code></td>
+</tr>
+<tr>
+  <td align='right'>71</td>
+  <td><code>abominable</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abomin</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abomin</code></td>
+  <td class='present'>present</td>
+  <td><code>abominable</code></td>
+</tr>
+<tr>
+  <td align='right'>72</td>
+  <td><code>abominably</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abomin</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abomin</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abominable</code></td>
+</tr>
+<tr>
+  <td align='right'>73</td>
+  <td><code>abominated</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abomin</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abomin</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abominate</code></td>
+</tr>
+<tr>
+  <td align='right'>74</td>
+  <td><code>abomination</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abomin</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abomin</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abominate</code></td>
+</tr>
+<tr>
+  <td align='right'>75</td>
+  <td><code>aboot</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>aboot</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>aboot</code></td>
+  <td class='absent'>absent</td>
+  <td><code>NIL</code></td>
+</tr>
+<tr>
+  <td align='right'>76</td>
+  <td><code>aboriginal</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>aborigin</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>aborigin</code></td>
+  <td class='present'>present</td>
+  <td><code>aboriginal</code></td>
+</tr>
+<tr>
+  <td align='right'>77</td>
+  <td><code>aboriginally</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>aborigin</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>aborigin</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>aboriginal</code></td>
+</tr>
+<tr>
+  <td align='right'>78</td>
+  <td><code>aborigines</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>aborigin</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>aborigin</code></td>
+  <td class='present'>present</td>
+  <td><code>aborigines</code></td>
+</tr>
+<tr>
+  <td align='right'>79</td>
+  <td><code>abortion</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abort</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abort</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abort</code></td>
+</tr>
+<tr>
+  <td align='right'>80</td>
+  <td><code>abortions</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abort</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abort</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abort</code></td>
+</tr>
+<tr>
+  <td align='right'>81</td>
+  <td><code>abortive</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abort</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abort</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abort</code></td>
+</tr>
+<tr>
+  <td align='right'>82</td>
+  <td><code>abound</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abound</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abound</code></td>
+  <td class='present'>present</td>
+  <td><code>abound</code></td>
+</tr>
+<tr>
+  <td align='right'>83</td>
+  <td><code>abounded</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abound</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abound</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abound</code></td>
+</tr>
+<tr>
+  <td align='right'>84</td>
+  <td><code>abounding</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abound</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abound</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abound</code></td>
+</tr>
+<tr>
+  <td align='right'>85</td>
+  <td><code>abounds</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abound</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abound</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abound</code></td>
+</tr>
+<tr>
+  <td align='right'>86</td>
+  <td><code>about</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>about</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>about</code></td>
+  <td class='stopword'>stopword</td>
+  <td><code>about</code></td>
+</tr>
+<tr>
+  <td align='right'>87</td>
+  <td><code>above</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abov</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abov</code></td>
+  <td class='stopword'>stopword</td>
+  <td><code>above</code></td>
+</tr>
+<tr>
+  <td align='right'>88</td>
+  <td><code>aboveboard</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>aboveboard</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>aboveboard</code></td>
+  <td class='present'>present</td>
+  <td><code>aboveboard</code></td>
+</tr>
+<tr>
+  <td align='right'>89</td>
+  <td><code>abraham</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abraham</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abraham</code></td>
+  <td class='absent'>absent</td>
+  <td><code>NIL</code></td>
+</tr>
+<tr>
+  <td align='right'>90</td>
+  <td><code>abreast</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abreast</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abreast</code></td>
+  <td class='present'>present</td>
+  <td><code>abreast</code></td>
+</tr>
+<tr>
+  <td align='right'>91</td>
+  <td><code>abridge</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abridg</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abridg</code></td>
+  <td class='present'>present</td>
+  <td><code>abridge</code></td>
+</tr>
+<tr>
+  <td align='right'>92</td>
+  <td><code>abridged</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abridg</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abridg</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abridge</code></td>
+</tr>
+<tr>
+  <td align='right'>93</td>
+  <td><code>abroad</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abroad</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abroad</code></td>
+  <td class='present'>present</td>
+  <td><code>abroad</code></td>
+</tr>
+<tr>
+  <td align='right'>94</td>
+  <td><code>abrogated</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abrog</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abrog</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abrogate</code></td>
+</tr>
+<tr>
+  <td align='right'>95</td>
+  <td><code>abrolhos</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abrolho</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abrolho</code></td>
+  <td class='absent'>absent</td>
+  <td><code>NIL</code></td>
+</tr>
+<tr>
+  <td align='right'>96</td>
+  <td><code>abrupt</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abrupt</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abrupt</code></td>
+  <td class='present'>present</td>
+  <td><code>abrupt</code></td>
+</tr>
+<tr>
+  <td align='right'>97</td>
+  <td><code>abruptly</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abruptli</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abrupt</code></td>
+  <td class='present'>present</td>
+  <td><code>abruptly</code></td>
+</tr>
+<tr>
+  <td align='right'>98</td>
+  <td><code>abruptness</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abrupt</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abrupt</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abrupt</code></td>
+</tr>
+<tr>
+  <td align='right'>99</td>
+  <td><code>abscess</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abscess</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abscess</code></td>
+  <td class='present'>present</td>
+  <td><code>abscess</code></td>
+</tr>
+<tr>
+  <td align='right'>100</td>
+  <td><code>absence</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>absenc</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>absenc</code></td>
+  <td class='present'>present</td>
+  <td><code>absence</code></td>
+</tr>
+<tr>
+  <td align='right'>101</td>
+  <td><code>absent</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>absent</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>absent</code></td>
+  <td class='present'>present</td>
+  <td><code>absent</code></td>
+</tr>
+<tr>
+  <td align='right'>102</td>
+  <td><code>absenting</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>absent</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>absent</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>absent</code></td>
+</tr>
+<tr>
+  <td align='right'>103</td>
+  <td><code>absolute</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>absolut</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>absolut</code></td>
+  <td class='present'>present</td>
+  <td><code>absolute</code></td>
+</tr>
+<tr>
+  <td align='right'>104</td>
+  <td><code>absolutely</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>absolut</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>absolut</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>absolute</code></td>
+</tr>
+<tr>
+  <td align='right'>105</td>
+  <td><code>absolve</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>absolv</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>absolv</code></td>
+  <td class='present'>present</td>
+  <td><code>absolve</code></td>
+</tr>
+<tr>
+  <td align='right'>106</td>
+  <td><code>absolved</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>absolv</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>absolv</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>absolve</code></td>
+</tr>
+<tr>
+  <td align='right'>107</td>
+  <td><code>absorb</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>absorb</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>absorb</code></td>
+  <td class='present'>present</td>
+  <td><code>absorb</code></td>
+</tr>
+<tr>
+  <td align='right'>108</td>
+  <td><code>absorbed</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>absorb</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>absorb</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>absorb</code></td>
+</tr>
+<tr>
+  <td align='right'>109</td>
+  <td><code>absorbent</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>absorb</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>absorb</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>absorb</code></td>
+</tr>
+<tr>
+  <td align='right'>110</td>
+  <td><code>absorbing</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>absorb</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>absorb</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>absorb</code></td>
+</tr>
+<tr>
+  <td align='right'>111</td>
+  <td><code>absorbs</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>absorb</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>absorb</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>absorb</code></td>
+</tr>
+<tr>
+  <td align='right'>112</td>
+  <td><code>absorption</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>absorpt</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>absorpt</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>absorpt</code></td>
+</tr>
+<tr>
+  <td align='right'>113</td>
+  <td><code>abstain</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abstain</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abstain</code></td>
+  <td class='present'>present</td>
+  <td><code>abstain</code></td>
+</tr>
+<tr>
+  <td align='right'>114</td>
+  <td><code>abstained</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abstain</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abstain</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abstain</code></td>
+</tr>
+<tr>
+  <td align='right'>115</td>
+  <td><code>abstaining</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abstain</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abstain</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abstain</code></td>
+</tr>
+<tr>
+  <td align='right'>116</td>
+  <td><code>abstinence</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abstin</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abstin</code></td>
+  <td class='present'>present</td>
+  <td><code>abstinence</code></td>
+</tr>
+<tr>
+  <td align='right'>117</td>
+  <td><code>abstract</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abstract</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abstract</code></td>
+  <td class='present'>present</td>
+  <td><code>abstract</code></td>
+</tr>
+<tr>
+  <td align='right'>118</td>
+  <td><code>abstracted</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abstract</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abstract</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abstract</code></td>
+</tr>
+<tr>
+  <td align='right'>119</td>
+  <td><code>abstractedly</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abstractedli</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abstract</code></td>
+  <td class='present'>present</td>
+  <td><code>abstractedly</code></td>
+</tr>
+<tr>
+  <td align='right'>120</td>
+  <td><code>abstraction</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abstract</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abstract</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abstract</code></td>
+</tr>
+<tr>
+  <td align='right'>121</td>
+  <td><code>abstracts</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abstract</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abstract</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abstract</code></td>
+</tr>
+<tr>
+  <td align='right'>122</td>
+  <td><code>abstruse</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abstrus</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abstrus</code></td>
+  <td class='present'>present</td>
+  <td><code>abstruse</code></td>
+</tr>
+<tr>
+  <td align='right'>123</td>
+  <td><code>absurd</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>absurd</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>absurd</code></td>
+  <td class='present'>present</td>
+  <td><code>absurd</code></td>
+</tr>
+<tr>
+  <td align='right'>124</td>
+  <td><code>absurdities</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>absurd</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>absurd</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>absurd</code></td>
+</tr>
+<tr>
+  <td align='right'>125</td>
+  <td><code>absurdity</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>absurd</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>absurd</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>absurd</code></td>
+</tr>
+<tr>
+  <td align='right'>126</td>
+  <td><code>absurdly</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>absurdli</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>absurd</code></td>
+  <td class='present'>present</td>
+  <td><code>absurdly</code></td>
+</tr>
+<tr>
+  <td align='right'>127</td>
+  <td><code>abt</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abt</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abt</code></td>
+  <td class='absent'>absent</td>
+  <td><code>NIL</code></td>
+</tr>
+<tr>
+  <td align='right'>128</td>
+  <td><code>abundance</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abund</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abund</code></td>
+  <td class='present'>present</td>
+  <td><code>abundance</code></td>
+</tr>
+<tr>
+  <td align='right'>129</td>
+  <td><code>abundant</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abund</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abund</code></td>
+  <td class='present'>present</td>
+  <td><code>abundant</code></td>
+</tr>
+<tr>
+  <td align='right'>130</td>
+  <td><code>abundantly</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abundantli</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abund</code></td>
+  <td class='present'>present</td>
+  <td><code>abundantly</code></td>
+</tr>
+<tr>
+  <td align='right'>131</td>
+  <td><code>abuse</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abus</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abus</code></td>
+  <td class='present'>present</td>
+  <td><code>abuse</code></td>
+</tr>
+<tr>
+  <td align='right'>132</td>
+  <td><code>abused</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abus</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abus</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abuse</code></td>
+</tr>
+<tr>
+  <td align='right'>133</td>
+  <td><code>abuses</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abus</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abus</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abuse</code></td>
+</tr>
+<tr>
+  <td align='right'>134</td>
+  <td><code>abusing</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abus</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abus</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abuse</code></td>
+</tr>
+<tr>
+  <td align='right'>135</td>
+  <td><code>abusive</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abus</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abus</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abuse</code></td>
+</tr>
+<tr>
+  <td align='right'>136</td>
+  <td><code>abut</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abut</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abut</code></td>
+  <td class='present'>present</td>
+  <td><code>abut</code></td>
+</tr>
+<tr>
+  <td align='right'>137</td>
+  <td><code>abuts</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abut</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abut</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abut</code></td>
+</tr>
+<tr>
+  <td align='right'>138</td>
+  <td><code>abutting</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abut</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abut</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abut</code></td>
+</tr>
+<tr>
+  <td align='right'>139</td>
+  <td><code>abyss</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abyss</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abyss</code></td>
+  <td class='present'>present</td>
+  <td><code>abyss</code></td>
+</tr>
+<tr>
+  <td align='right'>140</td>
+  <td><code>abysses</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abyss</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abyss</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abyss</code></td>
+</tr>
+<tr>
+  <td align='right'>141</td>
+  <td><code>abyssinia</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abyssinia</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>abyssinia</code></td>
+  <td class='present'>present</td>
+  <td><code>abyssinia</code></td>
+</tr>
+<tr>
+  <td align='right'>142</td>
+  <td><code>ac</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>ac</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>ac</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>ac</code></td>
+</tr>
+<tr>
+  <td align='right'>143</td>
+  <td><code>acacia</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acacia</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acacia</code></td>
+  <td class='present'>present</td>
+  <td><code>acacia</code></td>
+</tr>
+<tr>
+  <td align='right'>144</td>
+  <td><code>acacias</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acacia</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acacia</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acacia</code></td>
+</tr>
+<tr>
+  <td align='right'>145</td>
+  <td><code>academy</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>academi</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>academi</code></td>
+  <td class='present'>present</td>
+  <td><code>academy</code></td>
+</tr>
+<tr>
+  <td align='right'>146</td>
+  <td><code>acalypha</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acalypha</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acalypha</code></td>
+  <td class='absent'>absent</td>
+  <td><code>NIL</code></td>
+</tr>
+<tr>
+  <td align='right'>147</td>
+  <td><code>acapulco</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acapulco</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acapulco</code></td>
+  <td class='absent'>absent</td>
+  <td><code>NIL</code></td>
+</tr>
+<tr>
+  <td align='right'>148</td>
+  <td><code>accede</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acced</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acced</code></td>
+  <td class='present'>present</td>
+  <td><code>accede</code></td>
+</tr>
+<tr>
+  <td align='right'>149</td>
+  <td><code>acceded</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acced</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acced</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accede</code></td>
+</tr>
+<tr>
+  <td align='right'>150</td>
+  <td><code>accedes</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acced</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acced</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accede</code></td>
+</tr>
+<tr>
+  <td align='right'>151</td>
+  <td><code>accelerate</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acceler</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acceler</code></td>
+  <td class='present'>present</td>
+  <td><code>accelerate</code></td>
+</tr>
+<tr>
+  <td align='right'>152</td>
+  <td><code>accelerated</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acceler</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acceler</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accelerate</code></td>
+</tr>
+<tr>
+  <td align='right'>153</td>
+  <td><code>accent</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accent</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accent</code></td>
+  <td class='present'>present</td>
+  <td><code>accent</code></td>
+</tr>
+<tr>
+  <td align='right'>154</td>
+  <td><code>accents</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accent</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accent</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accent</code></td>
+</tr>
+<tr>
+  <td align='right'>155</td>
+  <td><code>accept</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accept</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accept</code></td>
+  <td class='present'>present</td>
+  <td><code>accept</code></td>
+</tr>
+<tr>
+  <td align='right'>156</td>
+  <td><code>acceptable</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accept</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accept</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accept</code></td>
+</tr>
+<tr>
+  <td align='right'>157</td>
+  <td><code>acceptance</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accept</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accept</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accept</code></td>
+</tr>
+<tr>
+  <td align='right'>158</td>
+  <td><code>acceptances</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accept</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accept</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accept</code></td>
+</tr>
+<tr>
+  <td align='right'>159</td>
+  <td><code>acceptation</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accept</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accept</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accept</code></td>
+</tr>
+<tr>
+  <td align='right'>160</td>
+  <td><code>accepted</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accept</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accept</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accept</code></td>
+</tr>
+<tr>
+  <td align='right'>161</td>
+  <td><code>accepting</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accept</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accept</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accept</code></td>
+</tr>
+<tr>
+  <td align='right'>162</td>
+  <td><code>accepts</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accept</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accept</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accept</code></td>
+</tr>
+<tr>
+  <td align='right'>163</td>
+  <td><code>access</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>access</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>access</code></td>
+  <td class='present'>present</td>
+  <td><code>access</code></td>
+</tr>
+<tr>
+  <td align='right'>164</td>
+  <td><code>accessible</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>access</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>access</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>access</code></td>
+</tr>
+<tr>
+  <td align='right'>165</td>
+  <td><code>accession</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>access</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>access</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>access</code></td>
+</tr>
+<tr>
+  <td align='right'>166</td>
+  <td><code>accessories</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accessori</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accessori</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accessory</code></td>
+</tr>
+<tr>
+  <td align='right'>167</td>
+  <td><code>accessory</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accessori</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accessori</code></td>
+  <td class='present'>present</td>
+  <td><code>accessory</code></td>
+</tr>
+<tr>
+  <td align='right'>168</td>
+  <td><code>accident</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accid</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accid</code></td>
+  <td class='present'>present</td>
+  <td><code>accident</code></td>
+</tr>
+<tr>
+  <td align='right'>169</td>
+  <td><code>accidental</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accident</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accident</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accident</code></td>
+</tr>
+<tr>
+  <td align='right'>170</td>
+  <td><code>accidentally</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accident</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accident</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accident</code></td>
+</tr>
+<tr>
+  <td align='right'>171</td>
+  <td><code>accidents</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accid</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accid</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accident</code></td>
+</tr>
+<tr>
+  <td align='right'>172</td>
+  <td><code>acclamations</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acclam</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acclam</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acclamation</code></td>
+</tr>
+<tr>
+  <td align='right'>173</td>
+  <td><code>acclivity</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accliv</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accliv</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acclive</code></td>
+</tr>
+<tr>
+  <td align='right'>174</td>
+  <td><code>accommodate</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accommod</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accommod</code></td>
+  <td class='present'>present</td>
+  <td><code>accommodate</code></td>
+</tr>
+<tr>
+  <td align='right'>175</td>
+  <td><code>accommodated</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accommod</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accommod</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accommodate</code></td>
+</tr>
+<tr>
+  <td align='right'>176</td>
+  <td><code>accommodating</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accommod</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accommod</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accommodate</code></td>
+</tr>
+<tr>
+  <td align='right'>177</td>
+  <td><code>accommodation</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accommod</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accommod</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accommodate</code></td>
+</tr>
+<tr>
+  <td align='right'>178</td>
+  <td><code>accommodations</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accommod</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accommod</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accommodate</code></td>
+</tr>
+<tr>
+  <td align='right'>179</td>
+  <td><code>accompanied</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accompani</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accompani</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accompany</code></td>
+</tr>
+<tr>
+  <td align='right'>180</td>
+  <td><code>accompanies</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accompani</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accompani</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accompany</code></td>
+</tr>
+<tr>
+  <td align='right'>181</td>
+  <td><code>accompaniment</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accompani</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accompani</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accompany</code></td>
+</tr>
+<tr>
+  <td align='right'>182</td>
+  <td><code>accompaniments</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accompani</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accompani</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accompany</code></td>
+</tr>
+<tr>
+  <td align='right'>183</td>
+  <td><code>accompany</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accompani</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accompani</code></td>
+  <td class='present'>present</td>
+  <td><code>accompany</code></td>
+</tr>
+<tr>
+  <td align='right'>184</td>
+  <td><code>accompanying</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accompani</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accompani</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accompany</code></td>
+</tr>
+<tr>
+  <td align='right'>185</td>
+  <td><code>accomplice</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accomplic</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accomplic</code></td>
+  <td class='present'>present</td>
+  <td><code>accomplice</code></td>
+</tr>
+<tr>
+  <td align='right'>186</td>
+  <td><code>accomplices</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accomplic</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accomplic</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accomplice</code></td>
+</tr>
+<tr>
+  <td align='right'>187</td>
+  <td><code>accomplish</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accomplish</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accomplish</code></td>
+  <td class='present'>present</td>
+  <td><code>accomplish</code></td>
+</tr>
+<tr>
+  <td align='right'>188</td>
+  <td><code>accomplished</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accomplish</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accomplish</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accomplish</code></td>
+</tr>
+<tr>
+  <td align='right'>189</td>
+  <td><code>accomplishes</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accomplish</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accomplish</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accomplish</code></td>
+</tr>
+<tr>
+  <td align='right'>190</td>
+  <td><code>accomplishing</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accomplish</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accomplish</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accomplish</code></td>
+</tr>
+<tr>
+  <td align='right'>191</td>
+  <td><code>accomplishment</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accomplish</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accomplish</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accomplish</code></td>
+</tr>
+<tr>
+  <td align='right'>192</td>
+  <td><code>accomplishments</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accomplish</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accomplish</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accomplish</code></td>
+</tr>
+<tr>
+  <td align='right'>193</td>
+  <td><code>accord</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accord</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accord</code></td>
+  <td class='present'>present</td>
+  <td><code>accord</code></td>
+</tr>
+<tr>
+  <td align='right'>194</td>
+  <td><code>accordance</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accord</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accord</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accord</code></td>
+</tr>
+<tr>
+  <td align='right'>195</td>
+  <td><code>accorded</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accord</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accord</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accord</code></td>
+</tr>
+<tr>
+  <td align='right'>196</td>
+  <td><code>according</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accord</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accord</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accord</code></td>
+</tr>
+<tr>
+  <td align='right'>197</td>
+  <td><code>accordingly</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accordingli</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accord</code></td>
+  <td class='present'>present</td>
+  <td><code>accordingly</code></td>
+</tr>
+<tr>
+  <td align='right'>198</td>
+  <td><code>accosted</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accost</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accost</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accost</code></td>
+</tr>
+<tr>
+  <td align='right'>199</td>
+  <td><code>accosting</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accost</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accost</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accost</code></td>
+</tr>
+<tr>
+  <td align='right'>200</td>
+  <td><code>accoun</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accoun</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accoun</code></td>
+  <td class='absent'>absent</td>
+  <td><code>NIL</code></td>
+</tr>
+<tr>
+  <td align='right'>201</td>
+  <td><code>account</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>account</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>account</code></td>
+  <td class='present'>present</td>
+  <td><code>account</code></td>
+</tr>
+<tr>
+  <td align='right'>202</td>
+  <td><code>accountabilities</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>account</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>account</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>account</code></td>
+</tr>
+<tr>
+  <td align='right'>203</td>
+  <td><code>accountability</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>account</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>account</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>account</code></td>
+</tr>
+<tr>
+  <td align='right'>204</td>
+  <td><code>accountable</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>account</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>account</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>account</code></td>
+</tr>
+<tr>
+  <td align='right'>205</td>
+  <td><code>accountant</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>account</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>account</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>account</code></td>
+</tr>
+<tr>
+  <td align='right'>206</td>
+  <td><code>accounted</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>account</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>account</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>account</code></td>
+</tr>
+<tr>
+  <td align='right'>207</td>
+  <td><code>accounting</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>account</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>account</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>account</code></td>
+</tr>
+<tr>
+  <td align='right'>208</td>
+  <td><code>accounts</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>account</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>account</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>account</code></td>
+</tr>
+<tr>
+  <td align='right'>209</td>
+  <td><code>accoutred</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accoutr</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accoutr</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accoutre</code></td>
+</tr>
+<tr>
+  <td align='right'>210</td>
+  <td><code>accoutrements</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accoutr</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accoutr</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accoutre</code></td>
+</tr>
+<tr>
+  <td align='right'>211</td>
+  <td><code>accredited</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accredit</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accredit</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accredit</code></td>
+</tr>
+<tr>
+  <td align='right'>212</td>
+  <td><code>accrue</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accru</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accru</code></td>
+  <td class='present'>present</td>
+  <td><code>accrue</code></td>
+</tr>
+<tr>
+  <td align='right'>213</td>
+  <td><code>accrued</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accru</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accru</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accrue</code></td>
+</tr>
+<tr>
+  <td align='right'>214</td>
+  <td><code>accruing</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accru</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accru</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accrue</code></td>
+</tr>
+<tr>
+  <td align='right'>215</td>
+  <td><code>accumulate</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accumul</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accumul</code></td>
+  <td class='present'>present</td>
+  <td><code>accumulate</code></td>
+</tr>
+<tr>
+  <td align='right'>216</td>
+  <td><code>accumulated</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accumul</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accumul</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accumulate</code></td>
+</tr>
+<tr>
+  <td align='right'>217</td>
+  <td><code>accumulating</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accumul</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accumul</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accumulate</code></td>
+</tr>
+<tr>
+  <td align='right'>218</td>
+  <td><code>accumulation</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accumul</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accumul</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accumulate</code></td>
+</tr>
+<tr>
+  <td align='right'>219</td>
+  <td><code>accumulations</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accumul</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accumul</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accumulate</code></td>
+</tr>
+<tr>
+  <td align='right'>220</td>
+  <td><code>accuracy</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accuraci</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accuraci</code></td>
+  <td class='present'>present</td>
+  <td><code>accuracy</code></td>
+</tr>
+<tr>
+  <td align='right'>221</td>
+  <td><code>accurate</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accur</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accur</code></td>
+  <td class='present'>present</td>
+  <td><code>accurate</code></td>
+</tr>
+<tr>
+  <td align='right'>222</td>
+  <td><code>accurately</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accur</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accur</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accurate</code></td>
+</tr>
+<tr>
+  <td align='right'>223</td>
+  <td><code>accursed</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accurs</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accurs</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accurse</code></td>
+</tr>
+<tr>
+  <td align='right'>224</td>
+  <td><code>accusation</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accus</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accus</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accuse</code></td>
+</tr>
+<tr>
+  <td align='right'>225</td>
+  <td><code>accusations</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accus</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accus</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accuse</code></td>
+</tr>
+<tr>
+  <td align='right'>226</td>
+  <td><code>accuse</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accus</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accus</code></td>
+  <td class='present'>present</td>
+  <td><code>accuse</code></td>
+</tr>
+<tr>
+  <td align='right'>227</td>
+  <td><code>accused</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accus</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accus</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accuse</code></td>
+</tr>
+<tr>
+  <td align='right'>228</td>
+  <td><code>accuser</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accus</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accus</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accuse</code></td>
+</tr>
+<tr>
+  <td align='right'>229</td>
+  <td><code>accusers</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accus</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accus</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accuse</code></td>
+</tr>
+<tr>
+  <td align='right'>230</td>
+  <td><code>accuses</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accus</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accus</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accuse</code></td>
+</tr>
+<tr>
+  <td align='right'>231</td>
+  <td><code>accusing</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accus</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>accus</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accuse</code></td>
+</tr>
+<tr>
+  <td align='right'>232</td>
+  <td><code>accustom</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accustom</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accustom</code></td>
+  <td class='present'>present</td>
+  <td><code>accustom</code></td>
+</tr>
+<tr>
+  <td align='right'>233</td>
+  <td><code>accustomed</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accustom</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accustom</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accustom</code></td>
+</tr>
+<tr>
+  <td align='right'>234</td>
+  <td><code>accustoming</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accustom</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accustom</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>accustom</code></td>
+</tr>
+<tr>
+  <td align='right'>235</td>
+  <td><code>ace</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>ac</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>ace</code></td>
+  <td class='present'>present</td>
+  <td><code>ace</code></td>
+</tr>
+<tr>
+  <td align='right'>236</td>
+  <td><code>acerbity</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acerb</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acerb</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acerb</code></td>
+</tr>
+<tr>
+  <td align='right'>237</td>
+  <td><code>aces</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>ac</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>ace</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>ace</code></td>
+</tr>
+<tr>
+  <td align='right'>238</td>
+  <td><code>ach</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>ach</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>ach</code></td>
+  <td class='present'>present</td>
+  <td><code>ach</code></td>
+</tr>
+<tr>
+  <td align='right'>239</td>
+  <td><code>ache</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>ach</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>ach</code></td>
+  <td class='present'>present</td>
+  <td><code>ache</code></td>
+</tr>
+<tr>
+  <td align='right'>240</td>
+  <td><code>ached</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>ach</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>ach</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>ach</code></td>
+</tr>
+<tr>
+  <td align='right'>241</td>
+  <td><code>aches</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>ach</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>ach</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>ache</code></td>
+</tr>
+<tr>
+  <td align='right'>242</td>
+  <td><code>achieve</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>achiev</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>achiev</code></td>
+  <td class='present'>present</td>
+  <td><code>achieve</code></td>
+</tr>
+<tr>
+  <td align='right'>243</td>
+  <td><code>achieved</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>achiev</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>achiev</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>achieve</code></td>
+</tr>
+<tr>
+  <td align='right'>244</td>
+  <td><code>achievement</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>achiev</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>achiev</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>achieve</code></td>
+</tr>
+<tr>
+  <td align='right'>245</td>
+  <td><code>achievements</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>achiev</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>achiev</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>achieve</code></td>
+</tr>
+<tr>
+  <td align='right'>246</td>
+  <td><code>achieves</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>achiev</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>achiev</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>achieve</code></td>
+</tr>
+<tr>
+  <td align='right'>247</td>
+  <td><code>achieving</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>achiev</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>achiev</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>achieve</code></td>
+</tr>
+<tr>
+  <td align='right'>248</td>
+  <td><code>achilles</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>achil</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>achill</code></td>
+  <td class='present'>present</td>
+  <td><code>achilles</code></td>
+</tr>
+<tr>
+  <td align='right'>249</td>
+  <td><code>aching</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>ach</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>ach</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>ach</code></td>
+</tr>
+<tr>
+  <td align='right'>250</td>
+  <td><code>acid</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acid</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acid</code></td>
+  <td class='present'>present</td>
+  <td><code>acid</code></td>
+</tr>
+<tr>
+  <td align='right'>251</td>
+  <td><code>acids</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acid</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acid</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acid</code></td>
+</tr>
+<tr>
+  <td align='right'>252</td>
+  <td><code>ack</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>ack</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>ack</code></td>
+  <td class='absent'>absent</td>
+  <td><code>NIL</code></td>
+</tr>
+<tr>
+  <td align='right'>253</td>
+  <td><code>ackney</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acknei</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>ackney</code></td>
+  <td class='absent'>absent</td>
+  <td><code>NIL</code></td>
+</tr>
+<tr>
+  <td align='right'>254</td>
+  <td><code>acknowledge</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acknowledg</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acknowledg</code></td>
+  <td class='present'>present</td>
+  <td><code>acknowledge</code></td>
+</tr>
+<tr>
+  <td align='right'>255</td>
+  <td><code>acknowledged</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acknowledg</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acknowledg</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acknowledge</code></td>
+</tr>
+<tr>
+  <td align='right'>256</td>
+  <td><code>acknowledgement</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acknowledg</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acknowledg</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acknowledge</code></td>
+</tr>
+<tr>
+  <td align='right'>257</td>
+  <td><code>acknowledges</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acknowledg</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acknowledg</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acknowledge</code></td>
+</tr>
+<tr>
+  <td align='right'>258</td>
+  <td><code>acknowledging</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acknowledg</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acknowledg</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acknowledge</code></td>
+</tr>
+<tr>
+  <td align='right'>259</td>
+  <td><code>acknowledgment</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acknowledg</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acknowledg</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acknowledge</code></td>
+</tr>
+<tr>
+  <td align='right'>260</td>
+  <td><code>acknowledgments</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acknowledg</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acknowledg</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acknowledge</code></td>
+</tr>
+<tr>
+  <td align='right'>261</td>
+  <td><code>aconcagua</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>aconcagua</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>aconcagua</code></td>
+  <td class='absent'>absent</td>
+  <td><code>NIL</code></td>
+</tr>
+<tr>
+  <td align='right'>262</td>
+  <td><code>acorn</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acorn</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acorn</code></td>
+  <td class='present'>present</td>
+  <td><code>acorn</code></td>
+</tr>
+<tr>
+  <td align='right'>263</td>
+  <td><code>acquaint</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acquaint</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acquaint</code></td>
+  <td class='present'>present</td>
+  <td><code>acquaint</code></td>
+</tr>
+<tr>
+  <td align='right'>264</td>
+  <td><code>acquaintance</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acquaint</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acquaint</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acquaint</code></td>
+</tr>
+<tr>
+  <td align='right'>265</td>
+  <td><code>acquaintances</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acquaint</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acquaint</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acquaint</code></td>
+</tr>
+<tr>
+  <td align='right'>266</td>
+  <td><code>acquainted</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acquaint</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acquaint</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acquaint</code></td>
+</tr>
+<tr>
+  <td align='right'>267</td>
+  <td><code>acquainting</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acquaint</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acquaint</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acquaint</code></td>
+</tr>
+<tr>
+  <td align='right'>268</td>
+  <td><code>acquaints</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acquaint</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acquaint</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acquaint</code></td>
+</tr>
+<tr>
+  <td align='right'>269</td>
+  <td><code>acquiesce</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acquiesc</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acquiesc</code></td>
+  <td class='present'>present</td>
+  <td><code>acquiesce</code></td>
+</tr>
+<tr>
+  <td align='right'>270</td>
+  <td><code>acquiesced</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acquiesc</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acquiesc</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acquiesce</code></td>
+</tr>
+<tr>
+  <td align='right'>271</td>
+  <td><code>acquiescence</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acquiesc</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acquiesc</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acquiesce</code></td>
+</tr>
+<tr>
+  <td align='right'>272</td>
+  <td><code>acquiescent</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acquiesc</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acquiesc</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acquiesce</code></td>
+</tr>
+<tr>
+  <td align='right'>273</td>
+  <td><code>acquiesces</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acquiesc</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acquiesc</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acquiesce</code></td>
+</tr>
+<tr>
+  <td align='right'>274</td>
+  <td><code>acquiescing</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acquiesc</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acquiesc</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acquiesce</code></td>
+</tr>
+<tr>
+  <td align='right'>275</td>
+  <td><code>acquire</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acquir</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acquir</code></td>
+  <td class='present'>present</td>
+  <td><code>acquire</code></td>
+</tr>
+<tr>
+  <td align='right'>276</td>
+  <td><code>acquired</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acquir</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acquir</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acquire</code></td>
+</tr>
+<tr>
+  <td align='right'>277</td>
+  <td><code>acquirement</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acquir</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acquir</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acquire</code></td>
+</tr>
+<tr>
+  <td align='right'>278</td>
+  <td><code>acquirements</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acquir</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acquir</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acquire</code></td>
+</tr>
+<tr>
+  <td align='right'>279</td>
+  <td><code>acquires</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acquir</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acquir</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acquire</code></td>
+</tr>
+<tr>
+  <td align='right'>280</td>
+  <td><code>acquiring</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acquir</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acquir</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acquire</code></td>
+</tr>
+<tr>
+  <td align='right'>281</td>
+  <td><code>acquisition</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acquisit</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acquisit</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acquisite</code></td>
+</tr>
+<tr>
+  <td align='right'>282</td>
+  <td><code>acquit</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acquit</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acquit</code></td>
+  <td class='present'>present</td>
+  <td><code>acquit</code></td>
+</tr>
+<tr>
+  <td align='right'>283</td>
+  <td><code>acquittal</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acquitt</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acquitt</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acquit</code></td>
+</tr>
+<tr>
+  <td align='right'>284</td>
+  <td><code>acquitted</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acquit</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acquit</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acquit</code></td>
+</tr>
+<tr>
+  <td align='right'>285</td>
+  <td><code>acqulred</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acqulr</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acqulr</code></td>
+  <td class='absent'>absent</td>
+  <td><code>NIL</code></td>
+</tr>
+<tr>
+  <td align='right'>286</td>
+  <td><code>acre</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acr</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acr</code></td>
+  <td class='present'>present</td>
+  <td><code>acre</code></td>
+</tr>
+<tr>
+  <td align='right'>287</td>
+  <td><code>acres</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acr</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acr</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acre</code></td>
+</tr>
+<tr>
+  <td align='right'>288</td>
+  <td><code>acrid</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acrid</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acrid</code></td>
+  <td class='present'>present</td>
+  <td><code>acrid</code></td>
+</tr>
+<tr>
+  <td align='right'>289</td>
+  <td><code>acrimonious</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acrimoni</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acrimoni</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acrimony</code></td>
+</tr>
+<tr>
+  <td align='right'>290</td>
+  <td><code>acrimoniously</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acrimoni</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acrimoni</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acrimony</code></td>
+</tr>
+<tr>
+  <td align='right'>291</td>
+  <td><code>across</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>across</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>across</code></td>
+  <td class='stopword'>stopword</td>
+  <td><code>across</code></td>
+</tr>
+<tr>
+  <td align='right'>292</td>
+  <td><code>acrydium</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acrydium</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acrydium</code></td>
+  <td class='absent'>absent</td>
+  <td><code>NIL</code></td>
+</tr>
+<tr>
+  <td align='right'>293</td>
+  <td><code>act</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>act</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>act</code></td>
+  <td class='present'>present</td>
+  <td><code>act</code></td>
+</tr>
+<tr>
+  <td align='right'>294</td>
+  <td><code>acted</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>act</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>act</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>act</code></td>
+</tr>
+<tr>
+  <td align='right'>295</td>
+  <td><code>acting</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>act</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>act</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>act</code></td>
+</tr>
+<tr>
+  <td align='right'>296</td>
+  <td><code>actinia</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>actinia</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>actinia</code></td>
+  <td class='present'>present</td>
+  <td><code>actinia</code></td>
+</tr>
+<tr>
+  <td align='right'>297</td>
+  <td><code>action</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>action</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>action</code></td>
+  <td class='present'>present</td>
+  <td><code>action</code></td>
+</tr>
+<tr>
+  <td align='right'>298</td>
+  <td><code>actions</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>action</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>action</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>action</code></td>
+</tr>
+<tr>
+  <td align='right'>299</td>
+  <td><code>active</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>activ</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>activ</code></td>
+  <td class='present'>present</td>
+  <td><code>active</code></td>
+</tr>
+<tr>
+  <td align='right'>300</td>
+  <td><code>actively</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>activ</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>activ</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>active</code></td>
+</tr>
+<tr>
+  <td align='right'>301</td>
+  <td><code>activity</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>activ</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>activ</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>active</code></td>
+</tr>
+<tr>
+  <td align='right'>302</td>
+  <td><code>actor</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>actor</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>actor</code></td>
+  <td class='present'>present</td>
+  <td><code>actor</code></td>
+</tr>
+<tr>
+  <td align='right'>303</td>
+  <td><code>actors</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>actor</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>actor</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>actor</code></td>
+</tr>
+<tr>
+  <td align='right'>304</td>
+  <td><code>actress</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>actress</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>actress</code></td>
+  <td class='present'>present</td>
+  <td><code>actress</code></td>
+</tr>
+<tr>
+  <td align='right'>305</td>
+  <td><code>actresses</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>actress</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>actress</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>actress</code></td>
+</tr>
+<tr>
+  <td align='right'>306</td>
+  <td><code>acts</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>act</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>act</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>act</code></td>
+</tr>
+<tr>
+  <td align='right'>307</td>
+  <td><code>actual</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>actual</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>actual</code></td>
+  <td class='present'>present</td>
+  <td><code>actual</code></td>
+</tr>
+<tr>
+  <td align='right'>308</td>
+  <td><code>actuality</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>actual</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>actual</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>actual</code></td>
+</tr>
+<tr>
+  <td align='right'>309</td>
+  <td><code>actually</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>actual</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>actual</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>actual</code></td>
+</tr>
+<tr>
+  <td align='right'>310</td>
+  <td><code>actuate</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>actuat</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>actuat</code></td>
+  <td class='present'>present</td>
+  <td><code>actuate</code></td>
+</tr>
+<tr>
+  <td align='right'>311</td>
+  <td><code>actuated</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>actuat</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>actuat</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>actuate</code></td>
+</tr>
+<tr>
+  <td align='right'>312</td>
+  <td><code>actuating</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>actuat</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>actuat</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>actuate</code></td>
+</tr>
+<tr>
+  <td align='right'>313</td>
+  <td><code>acumen</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acumen</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acumen</code></td>
+  <td class='present'>present</td>
+  <td><code>acumen</code></td>
+</tr>
+<tr>
+  <td align='right'>314</td>
+  <td><code>acunha</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acunha</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acunha</code></td>
+  <td class='absent'>absent</td>
+  <td><code>NIL</code></td>
+</tr>
+<tr>
+  <td align='right'>315</td>
+  <td><code>acut</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acut</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acut</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acute</code></td>
+</tr>
+<tr>
+  <td align='right'>316</td>
+  <td><code>acute</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acut</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acut</code></td>
+  <td class='present'>present</td>
+  <td><code>acute</code></td>
+</tr>
+<tr>
+  <td align='right'>317</td>
+  <td><code>acutely</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acut</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acut</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acute</code></td>
+</tr>
+<tr>
+  <td align='right'>318</td>
+  <td><code>acuteness</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acut</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acut</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acute</code></td>
+</tr>
+<tr>
+  <td align='right'>319</td>
+  <td><code>acuter</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acut</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>acut</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>acute</code></td>
+</tr>
+<tr>
+  <td align='right'>320</td>
+  <td><code>ad</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>ad</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>ad</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>ad</code></td>
+</tr>
+<tr>
+  <td align='right'>321</td>
+  <td><code>ada</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>ada</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>ada</code></td>
+  <td class='absent'>absent</td>
+  <td><code>NIL</code></td>
+</tr>
+<tr>
+  <td align='right'>322</td>
+  <td><code>adage</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adag</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adag</code></td>
+  <td class='present'>present</td>
+  <td><code>adage</code></td>
+</tr>
+<tr>
+  <td align='right'>323</td>
+  <td><code>adages</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adag</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adag</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adage</code></td>
+</tr>
+<tr>
+  <td align='right'>324</td>
+  <td><code>adam</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adam</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adam</code></td>
+  <td class='present'>present</td>
+  <td><code>adam</code></td>
+</tr>
+<tr>
+  <td align='right'>325</td>
+  <td><code>adamant</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adam</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adam</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adam</code></td>
+</tr>
+<tr>
+  <td align='right'>326</td>
+  <td><code>adams</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adam</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adam</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adam</code></td>
+</tr>
+<tr>
+  <td align='right'>327</td>
+  <td><code>adapt</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adapt</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adapt</code></td>
+  <td class='present'>present</td>
+  <td><code>adapt</code></td>
+</tr>
+<tr>
+  <td align='right'>328</td>
+  <td><code>adaptability</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adapt</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adapt</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adapt</code></td>
+</tr>
+<tr>
+  <td align='right'>329</td>
+  <td><code>adaptable</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adapt</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adapt</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adapt</code></td>
+</tr>
+<tr>
+  <td align='right'>330</td>
+  <td><code>adaptation</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adapt</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adapt</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adapt</code></td>
+</tr>
+<tr>
+  <td align='right'>331</td>
+  <td><code>adapted</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adapt</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adapt</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adapt</code></td>
+</tr>
+<tr>
+  <td align='right'>332</td>
+  <td><code>adapter</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adapt</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adapt</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adapt</code></td>
+</tr>
+<tr>
+  <td align='right'>333</td>
+  <td><code>adapting</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adapt</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adapt</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adapt</code></td>
+</tr>
+<tr>
+  <td align='right'>334</td>
+  <td><code>adapts</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adapt</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adapt</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adapt</code></td>
+</tr>
+<tr>
+  <td align='right'>335</td>
+  <td><code>adas</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>ada</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>ada</code></td>
+  <td class='absent'>absent</td>
+  <td><code>NIL</code></td>
+</tr>
+<tr>
+  <td align='right'>336</td>
+  <td><code>add</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>add</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>add</code></td>
+  <td class='present'>present</td>
+  <td><code>add</code></td>
+</tr>
+<tr>
+  <td align='right'>337</td>
+  <td><code>added</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>ad</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>ad</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>ad</code></td>
+</tr>
+<tr>
+  <td align='right'>338</td>
+  <td><code>adder</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adder</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adder</code></td>
+  <td class='present'>present</td>
+  <td><code>adder</code></td>
+</tr>
+<tr>
+  <td align='right'>339</td>
+  <td><code>addicted</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>addict</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>addict</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>addict</code></td>
+</tr>
+<tr>
+  <td align='right'>340</td>
+  <td><code>adding</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>ad</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>ad</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>ad</code></td>
+</tr>
+<tr>
+  <td align='right'>341</td>
+  <td><code>addition</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>addit</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>addit</code></td>
+  <td class='present'>present</td>
+  <td><code>addition</code></td>
+</tr>
+<tr>
+  <td align='right'>342</td>
+  <td><code>additional</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>addit</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>addit</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>addition</code></td>
+</tr>
+<tr>
+  <td align='right'>343</td>
+  <td><code>additionally</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>addition</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>addit</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>addition</code></td>
+</tr>
+<tr>
+  <td align='right'>344</td>
+  <td><code>additions</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>addit</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>addit</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>addition</code></td>
+</tr>
+<tr>
+  <td align='right'>345</td>
+  <td><code>addled</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>addl</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>addl</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>addle</code></td>
+</tr>
+<tr>
+  <td align='right'>346</td>
+  <td><code>address</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>address</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>address</code></td>
+  <td class='present'>present</td>
+  <td><code>address</code></td>
+</tr>
+<tr>
+  <td align='right'>347</td>
+  <td><code>addressed</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>address</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>address</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>address</code></td>
+</tr>
+<tr>
+  <td align='right'>348</td>
+  <td><code>addresses</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>address</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>address</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>address</code></td>
+</tr>
+<tr>
+  <td align='right'>349</td>
+  <td><code>addressing</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>address</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>address</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>address</code></td>
+</tr>
+<tr>
+  <td align='right'>350</td>
+  <td><code>adds</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>add</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>add</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>add</code></td>
+</tr>
+<tr>
+  <td align='right'>351</td>
+  <td><code>adduced</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adduc</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adduc</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adduce</code></td>
+</tr>
+<tr>
+  <td align='right'>352</td>
+  <td><code>adducing</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adduc</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adduc</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adduce</code></td>
+</tr>
+<tr>
+  <td align='right'>353</td>
+  <td><code>adequate</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adequ</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adequ</code></td>
+  <td class='present'>present</td>
+  <td><code>adequate</code></td>
+</tr>
+<tr>
+  <td align='right'>354</td>
+  <td><code>adhere</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adher</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adher</code></td>
+  <td class='present'>present</td>
+  <td><code>adhere</code></td>
+</tr>
+<tr>
+  <td align='right'>355</td>
+  <td><code>adhered</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adher</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adher</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adhere</code></td>
+</tr>
+<tr>
+  <td align='right'>356</td>
+  <td><code>adherence</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adher</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adher</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adhere</code></td>
+</tr>
+<tr>
+  <td align='right'>357</td>
+  <td><code>adherent</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adher</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adher</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adhere</code></td>
+</tr>
+<tr>
+  <td align='right'>358</td>
+  <td><code>adherents</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adher</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adher</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adhere</code></td>
+</tr>
+<tr>
+  <td align='right'>359</td>
+  <td><code>adheres</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adher</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adher</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adhere</code></td>
+</tr>
+<tr>
+  <td align='right'>360</td>
+  <td><code>adhering</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adher</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adher</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adhere</code></td>
+</tr>
+<tr>
+  <td align='right'>361</td>
+  <td><code>adhesive</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adhes</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adhes</code></td>
+  <td class='present'>present</td>
+  <td><code>adhesive</code></td>
+</tr>
+<tr>
+  <td align='right'>362</td>
+  <td><code>adieu</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adieu</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adieu</code></td>
+  <td class='present'>present</td>
+  <td><code>adieu</code></td>
+</tr>
+<tr>
+  <td align='right'>363</td>
+  <td><code>adieux</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adieux</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adieux</code></td>
+  <td class='absent'>absent</td>
+  <td><code>NIL</code></td>
+</tr>
+<tr>
+  <td align='right'>364</td>
+  <td><code>adimonia</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adimonia</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adimonia</code></td>
+  <td class='absent'>absent</td>
+  <td><code>NIL</code></td>
+</tr>
+<tr>
+  <td align='right'>365</td>
+  <td><code>adios</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adio</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adio</code></td>
+  <td class='present'>present</td>
+  <td><code>adios</code></td>
+</tr>
+<tr>
+  <td align='right'>366</td>
+  <td><code>adjacent</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adjac</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adjac</code></td>
+  <td class='present'>present</td>
+  <td><code>adjacent</code></td>
+</tr>
+<tr>
+  <td align='right'>367</td>
+  <td><code>adjective</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adject</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adject</code></td>
+  <td class='present'>present</td>
+  <td><code>adjective</code></td>
+</tr>
+<tr>
+  <td align='right'>368</td>
+  <td><code>adjoined</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adjoin</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adjoin</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adjoin</code></td>
+</tr>
+<tr>
+  <td align='right'>369</td>
+  <td><code>adjoining</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adjoin</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adjoin</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adjoin</code></td>
+</tr>
+<tr>
+  <td align='right'>370</td>
+  <td><code>adjourned</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adjourn</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adjourn</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adjourn</code></td>
+</tr>
+<tr>
+  <td align='right'>371</td>
+  <td><code>adjournment</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adjourn</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adjourn</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adjourn</code></td>
+</tr>
+<tr>
+  <td align='right'>372</td>
+  <td><code>adjuration</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adjur</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adjur</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adjure</code></td>
+</tr>
+<tr>
+  <td align='right'>373</td>
+  <td><code>adjurations</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adjur</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adjur</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adjure</code></td>
+</tr>
+<tr>
+  <td align='right'>374</td>
+  <td><code>adjured</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adjur</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adjur</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adjure</code></td>
+</tr>
+<tr>
+  <td align='right'>375</td>
+  <td><code>adjuring</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adjur</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adjur</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adjure</code></td>
+</tr>
+<tr>
+  <td align='right'>376</td>
+  <td><code>adjust</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adjust</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adjust</code></td>
+  <td class='present'>present</td>
+  <td><code>adjust</code></td>
+</tr>
+<tr>
+  <td align='right'>377</td>
+  <td><code>adjusted</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adjust</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adjust</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adjust</code></td>
+</tr>
+<tr>
+  <td align='right'>378</td>
+  <td><code>adjusting</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adjust</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adjust</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adjust</code></td>
+</tr>
+<tr>
+  <td align='right'>379</td>
+  <td><code>adjustment</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adjust</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adjust</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adjust</code></td>
+</tr>
+<tr>
+  <td align='right'>380</td>
+  <td><code>adjusts</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adjust</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adjust</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adjust</code></td>
+</tr>
+<tr>
+  <td align='right'>381</td>
+  <td><code>adjutant</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adjut</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adjut</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adjute</code></td>
+</tr>
+<tr>
+  <td align='right'>382</td>
+  <td><code>administer</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>administ</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>administ</code></td>
+  <td class='present'>present</td>
+  <td><code>administer</code></td>
+</tr>
+<tr>
+  <td align='right'>383</td>
+  <td><code>administered</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>administ</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>administ</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>administer</code></td>
+</tr>
+<tr>
+  <td align='right'>384</td>
+  <td><code>administering</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>administ</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>administ</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>administer</code></td>
+</tr>
+<tr>
+  <td align='right'>385</td>
+  <td><code>administration</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>administr</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>administr</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>administrate</code></td>
+</tr>
+<tr>
+  <td align='right'>386</td>
+  <td><code>administrative</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>administr</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>administr</code></td>
+  <td class='present'>present</td>
+  <td><code>administrative</code></td>
+</tr>
+<tr>
+  <td align='right'>387</td>
+  <td><code>administrator</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>administr</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>administr</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>administrate</code></td>
+</tr>
+<tr>
+  <td align='right'>388</td>
+  <td><code>administrators</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>administr</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>administr</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>administrate</code></td>
+</tr>
+<tr>
+  <td align='right'>389</td>
+  <td><code>admirable</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admir</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admir</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>admire</code></td>
+</tr>
+<tr>
+  <td align='right'>390</td>
+  <td><code>admirably</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admir</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admir</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>admire</code></td>
+</tr>
+<tr>
+  <td align='right'>391</td>
+  <td><code>admiral</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admir</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admir</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>admire</code></td>
+</tr>
+<tr>
+  <td align='right'>392</td>
+  <td><code>admiralty</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admiralti</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admiralti</code></td>
+  <td class='present'>present</td>
+  <td><code>admiralty</code></td>
+</tr>
+<tr>
+  <td align='right'>393</td>
+  <td><code>admiration</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admir</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admir</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>admire</code></td>
+</tr>
+<tr>
+  <td align='right'>394</td>
+  <td><code>admire</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admir</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admir</code></td>
+  <td class='present'>present</td>
+  <td><code>admire</code></td>
+</tr>
+<tr>
+  <td align='right'>395</td>
+  <td><code>admired</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admir</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admir</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>admire</code></td>
+</tr>
+<tr>
+  <td align='right'>396</td>
+  <td><code>admirer</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admir</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admir</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>admire</code></td>
+</tr>
+<tr>
+  <td align='right'>397</td>
+  <td><code>admirers</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admir</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admir</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>admire</code></td>
+</tr>
+<tr>
+  <td align='right'>398</td>
+  <td><code>admires</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admir</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admir</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>admire</code></td>
+</tr>
+<tr>
+  <td align='right'>399</td>
+  <td><code>admiring</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admir</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admir</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>admire</code></td>
+</tr>
+<tr>
+  <td align='right'>400</td>
+  <td><code>admiringly</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admiringli</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admir</code></td>
+  <td class='present'>present</td>
+  <td><code>admiringly</code></td>
+</tr>
+<tr>
+  <td align='right'>401</td>
+  <td><code>admission</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admiss</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admiss</code></td>
+  <td class='present'>present</td>
+  <td><code>admission</code></td>
+</tr>
+<tr>
+  <td align='right'>402</td>
+  <td><code>admissions</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admiss</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admiss</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>admission</code></td>
+</tr>
+<tr>
+  <td align='right'>403</td>
+  <td><code>admit</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>admit</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>admit</code></td>
+  <td class='present'>present</td>
+  <td><code>admit</code></td>
+</tr>
+<tr>
+  <td align='right'>404</td>
+  <td><code>admits</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>admit</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>admit</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>admit</code></td>
+</tr>
+<tr>
+  <td align='right'>405</td>
+  <td><code>admittance</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admitt</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admitt</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>admit</code></td>
+</tr>
+<tr>
+  <td align='right'>406</td>
+  <td><code>admitted</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>admit</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>admit</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>admit</code></td>
+</tr>
+<tr>
+  <td align='right'>407</td>
+  <td><code>admitting</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>admit</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>admit</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>admit</code></td>
+</tr>
+<tr>
+  <td align='right'>408</td>
+  <td><code>admixture</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admixtur</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admixtur</code></td>
+  <td class='present'>present</td>
+  <td><code>admixture</code></td>
+</tr>
+<tr>
+  <td align='right'>409</td>
+  <td><code>admonished</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>admonish</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>admonish</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>admonish</code></td>
+</tr>
+<tr>
+  <td align='right'>410</td>
+  <td><code>admonishes</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>admonish</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>admonish</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>admonish</code></td>
+</tr>
+<tr>
+  <td align='right'>411</td>
+  <td><code>admonishing</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>admonish</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>admonish</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>admonish</code></td>
+</tr>
+<tr>
+  <td align='right'>412</td>
+  <td><code>admonition</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admonit</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admonit</code></td>
+  <td class='present'>present</td>
+  <td><code>admonition</code></td>
+</tr>
+<tr>
+  <td align='right'>413</td>
+  <td><code>admonitions</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admonit</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admonit</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>admonition</code></td>
+</tr>
+<tr>
+  <td align='right'>414</td>
+  <td><code>admonitory</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admonitori</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>admonitori</code></td>
+  <td class='present'>present</td>
+  <td><code>admonitory</code></td>
+</tr>
+<tr>
+  <td align='right'>415</td>
+  <td><code>adn</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adn</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adn</code></td>
+  <td class='absent'>absent</td>
+  <td><code>NIL</code></td>
+</tr>
+<tr>
+  <td align='right'>416</td>
+  <td><code>ado</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>ado</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>ado</code></td>
+  <td class='present'>present</td>
+  <td><code>ado</code></td>
+</tr>
+<tr>
+  <td align='right'>417</td>
+  <td><code>adopt</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adopt</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adopt</code></td>
+  <td class='present'>present</td>
+  <td><code>adopt</code></td>
+</tr>
+<tr>
+  <td align='right'>418</td>
+  <td><code>adopted</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adopt</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adopt</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adopt</code></td>
+</tr>
+<tr>
+  <td align='right'>419</td>
+  <td><code>adopting</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adopt</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adopt</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adopt</code></td>
+</tr>
+<tr>
+  <td align='right'>420</td>
+  <td><code>adoption</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adopt</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adopt</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adopt</code></td>
+</tr>
+<tr>
+  <td align='right'>421</td>
+  <td><code>adoration</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>ador</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>ador</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adore</code></td>
+</tr>
+<tr>
+  <td align='right'>422</td>
+  <td><code>adorations</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>ador</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>ador</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adore</code></td>
+</tr>
+<tr>
+  <td align='right'>423</td>
+  <td><code>adore</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>ador</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>ador</code></td>
+  <td class='present'>present</td>
+  <td><code>adore</code></td>
+</tr>
+<tr>
+  <td align='right'>424</td>
+  <td><code>adored</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>ador</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>ador</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adore</code></td>
+</tr>
+<tr>
+  <td align='right'>425</td>
+  <td><code>adores</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>ador</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>ador</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adore</code></td>
+</tr>
+<tr>
+  <td align='right'>426</td>
+  <td><code>adoring</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>ador</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>ador</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adore</code></td>
+</tr>
+<tr>
+  <td align='right'>427</td>
+  <td><code>adorned</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adorn</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adorn</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adorn</code></td>
+</tr>
+<tr>
+  <td align='right'>428</td>
+  <td><code>adorning</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adorn</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adorn</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adorn</code></td>
+</tr>
+<tr>
+  <td align='right'>429</td>
+  <td><code>adornment</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adorn</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adorn</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adorn</code></td>
+</tr>
+<tr>
+  <td align='right'>430</td>
+  <td><code>adornments</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adorn</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adorn</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adorn</code></td>
+</tr>
+<tr>
+  <td align='right'>431</td>
+  <td><code>adorns</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adorn</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adorn</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adorn</code></td>
+</tr>
+<tr>
+  <td align='right'>432</td>
+  <td><code>adrianople</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adrianopl</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adrianopl</code></td>
+  <td class='present'>present</td>
+  <td><code>adrianople</code></td>
+</tr>
+<tr>
+  <td align='right'>433</td>
+  <td><code>adrift</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adrift</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adrift</code></td>
+  <td class='present'>present</td>
+  <td><code>adrift</code></td>
+</tr>
+<tr>
+  <td align='right'>434</td>
+  <td><code>adroit</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adroit</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adroit</code></td>
+  <td class='present'>present</td>
+  <td><code>adroit</code></td>
+</tr>
+<tr>
+  <td align='right'>435</td>
+  <td><code>adulation</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adul</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adul</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adulate</code></td>
+</tr>
+<tr>
+  <td align='right'>436</td>
+  <td><code>adulatory</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adulatori</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adulatori</code></td>
+  <td class='present'>present</td>
+  <td><code>adulatory</code></td>
+</tr>
+<tr>
+  <td align='right'>437</td>
+  <td><code>adult</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adult</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adult</code></td>
+  <td class='present'>present</td>
+  <td><code>adult</code></td>
+</tr>
+<tr>
+  <td align='right'>438</td>
+  <td><code>adultery</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adulteri</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adulteri</code></td>
+  <td class='present'>present</td>
+  <td><code>adultery</code></td>
+</tr>
+<tr>
+  <td align='right'>439</td>
+  <td><code>advance</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advanc</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advanc</code></td>
+  <td class='present'>present</td>
+  <td><code>advance</code></td>
+</tr>
+<tr>
+  <td align='right'>440</td>
+  <td><code>advanced</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advanc</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advanc</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>advance</code></td>
+</tr>
+<tr>
+  <td align='right'>441</td>
+  <td><code>advancement</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advanc</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advanc</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>advance</code></td>
+</tr>
+<tr>
+  <td align='right'>442</td>
+  <td><code>advances</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advanc</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advanc</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>advance</code></td>
+</tr>
+<tr>
+  <td align='right'>443</td>
+  <td><code>advancing</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advanc</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advanc</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>advance</code></td>
+</tr>
+<tr>
+  <td align='right'>444</td>
+  <td><code>advantage</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advantag</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advantag</code></td>
+  <td class='present'>present</td>
+  <td><code>advantage</code></td>
+</tr>
+<tr>
+  <td align='right'>445</td>
+  <td><code>advantageous</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advantag</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advantag</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>advantage</code></td>
+</tr>
+<tr>
+  <td align='right'>446</td>
+  <td><code>advantageously</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advantag</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advantag</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>advantage</code></td>
+</tr>
+<tr>
+  <td align='right'>447</td>
+  <td><code>advantages</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advantag</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advantag</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>advantage</code></td>
+</tr>
+<tr>
+  <td align='right'>448</td>
+  <td><code>advent</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>advent</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>advent</code></td>
+  <td class='present'>present</td>
+  <td><code>advent</code></td>
+</tr>
+<tr>
+  <td align='right'>449</td>
+  <td><code>adventure</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adventur</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adventur</code></td>
+  <td class='present'>present</td>
+  <td><code>adventure</code></td>
+</tr>
+<tr>
+  <td align='right'>450</td>
+  <td><code>adventurer</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adventur</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adventur</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adventure</code></td>
+</tr>
+<tr>
+  <td align='right'>451</td>
+  <td><code>adventurers</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adventur</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adventur</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adventure</code></td>
+</tr>
+<tr>
+  <td align='right'>452</td>
+  <td><code>adventures</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adventur</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adventur</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adventure</code></td>
+</tr>
+<tr>
+  <td align='right'>453</td>
+  <td><code>adventuresses</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adventuress</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adventuress</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adventuress</code></td>
+</tr>
+<tr>
+  <td align='right'>454</td>
+  <td><code>adventurous</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adventur</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adventur</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adventure</code></td>
+</tr>
+<tr>
+  <td align='right'>455</td>
+  <td><code>adventurously</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adventur</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adventur</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adventure</code></td>
+</tr>
+<tr>
+  <td align='right'>456</td>
+  <td><code>adversaries</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adversari</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adversari</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adversary</code></td>
+</tr>
+<tr>
+  <td align='right'>457</td>
+  <td><code>adversary</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adversari</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adversari</code></td>
+  <td class='present'>present</td>
+  <td><code>adversary</code></td>
+</tr>
+<tr>
+  <td align='right'>458</td>
+  <td><code>adverse</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advers</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advers</code></td>
+  <td class='present'>present</td>
+  <td><code>adverse</code></td>
+</tr>
+<tr>
+  <td align='right'>459</td>
+  <td><code>adversity</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advers</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advers</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adverse</code></td>
+</tr>
+<tr>
+  <td align='right'>460</td>
+  <td><code>advert</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>advert</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>advert</code></td>
+  <td class='present'>present</td>
+  <td><code>advert</code></td>
+</tr>
+<tr>
+  <td align='right'>461</td>
+  <td><code>adverted</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>advert</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>advert</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>advert</code></td>
+</tr>
+<tr>
+  <td align='right'>462</td>
+  <td><code>adverting</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>advert</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>advert</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>advert</code></td>
+</tr>
+<tr>
+  <td align='right'>463</td>
+  <td><code>advertise</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advertis</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advertis</code></td>
+  <td class='present'>present</td>
+  <td><code>advertise</code></td>
+</tr>
+<tr>
+  <td align='right'>464</td>
+  <td><code>advertised</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advertis</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advertis</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>advertise</code></td>
+</tr>
+<tr>
+  <td align='right'>465</td>
+  <td><code>advertisement</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advertis</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advertis</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>advertise</code></td>
+</tr>
+<tr>
+  <td align='right'>466</td>
+  <td><code>advertisements</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advertis</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advertis</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>advertise</code></td>
+</tr>
+<tr>
+  <td align='right'>467</td>
+  <td><code>advertiser</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advertis</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advertis</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>advertise</code></td>
+</tr>
+<tr>
+  <td align='right'>468</td>
+  <td><code>advertising</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advertis</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advertis</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>advertise</code></td>
+</tr>
+<tr>
+  <td align='right'>469</td>
+  <td><code>advice</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advic</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advic</code></td>
+  <td class='present'>present</td>
+  <td><code>advice</code></td>
+</tr>
+<tr>
+  <td align='right'>470</td>
+  <td><code>advisability</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advis</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advis</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>advise</code></td>
+</tr>
+<tr>
+  <td align='right'>471</td>
+  <td><code>advisable</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advis</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advis</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>advise</code></td>
+</tr>
+<tr>
+  <td align='right'>472</td>
+  <td><code>advise</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advis</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advis</code></td>
+  <td class='present'>present</td>
+  <td><code>advise</code></td>
+</tr>
+<tr>
+  <td align='right'>473</td>
+  <td><code>advised</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advis</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advis</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>advise</code></td>
+</tr>
+<tr>
+  <td align='right'>474</td>
+  <td><code>advisedly</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advisedli</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advis</code></td>
+  <td class='present'>present</td>
+  <td><code>advisedly</code></td>
+</tr>
+<tr>
+  <td align='right'>475</td>
+  <td><code>adviser</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advis</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advis</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>advise</code></td>
+</tr>
+<tr>
+  <td align='right'>476</td>
+  <td><code>advises</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advis</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advis</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>advise</code></td>
+</tr>
+<tr>
+  <td align='right'>477</td>
+  <td><code>advising</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advis</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advis</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>advise</code></td>
+</tr>
+<tr>
+  <td align='right'>478</td>
+  <td><code>advocacy</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advocaci</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advocaci</code></td>
+  <td class='present'>present</td>
+  <td><code>advocacy</code></td>
+</tr>
+<tr>
+  <td align='right'>479</td>
+  <td><code>advocate</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advoc</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advoc</code></td>
+  <td class='present'>present</td>
+  <td><code>advocate</code></td>
+</tr>
+<tr>
+  <td align='right'>480</td>
+  <td><code>advocated</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advoc</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advoc</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>advocate</code></td>
+</tr>
+<tr>
+  <td align='right'>481</td>
+  <td><code>advocating</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advoc</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>advoc</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>advocate</code></td>
+</tr>
+<tr>
+  <td align='right'>482</td>
+  <td><code>adwiser</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adwis</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>adwis</code></td>
+  <td class='absent'>absent</td>
+  <td><code>NIL</code></td>
+</tr>
+<tr>
+  <td align='right'>483</td>
+  <td><code>aeqam</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>aeqam</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>aeqam</code></td>
+  <td class='absent'>absent</td>
+  <td><code>NIL</code></td>
+</tr>
+<tr>
+  <td align='right'>484</td>
+  <td><code>aerial</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>aerial</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>aerial</code></td>
+  <td class='present'>present</td>
+  <td><code>aerial</code></td>
+</tr>
+<tr>
+  <td align='right'>485</td>
+  <td><code>aeriform</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>aeriform</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>aeriform</code></td>
+  <td class='absent'>absent</td>
+  <td><code>NIL</code></td>
+</tr>
+<tr>
+  <td align='right'>486</td>
+  <td><code>aeronaut</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>aeronaut</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>aeronaut</code></td>
+  <td class='present'>present</td>
+  <td><code>aeronaut</code></td>
+</tr>
+<tr>
+  <td align='right'>487</td>
+  <td><code>aeronautics</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>aeronaut</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>aeronaut</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>aeronaut</code></td>
+</tr>
+<tr>
+  <td align='right'>488</td>
+  <td><code>aery</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>aeri</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>aeri</code></td>
+  <td class='present'>present</td>
+  <td><code>aery</code></td>
+</tr>
+<tr>
+  <td align='right'>489</td>
+  <td><code>aeschylus</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>aeschylu</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>aeschylus</code></td>
+  <td class='absent'>absent</td>
+  <td><code>NIL</code></td>
+</tr>
+<tr>
+  <td align='right'>490</td>
+  <td><code>aesop</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>aesop</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>aesop</code></td>
+  <td class='absent'>absent</td>
+  <td><code>NIL</code></td>
+</tr>
+<tr>
+  <td align='right'>491</td>
+  <td><code>aesthetic</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>aesthet</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>aesthet</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>aesthete</code></td>
+</tr>
+<tr>
+  <td align='right'>492</td>
+  <td><code>aesthetically</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>aesthet</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>aesthet</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>aesthete</code></td>
+</tr>
+<tr>
+  <td align='right'>493</td>
+  <td><code>aesthetics</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>aesthet</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>aesthet</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>aesthete</code></td>
+</tr>
+<tr>
+  <td align='right'>494</td>
+  <td><code>aestivation</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>aestiv</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>aestiv</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>aestivate</code></td>
+</tr>
+<tr>
+  <td align='right'>495</td>
+  <td><code>afanasy</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>afanasi</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>afanasi</code></td>
+  <td class='absent'>absent</td>
+  <td><code>NIL</code></td>
+</tr>
+<tr>
+  <td align='right'>496</td>
+  <td><code>afanasyvitch</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>afanasyvitch</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>afanasyvitch</code></td>
+  <td class='absent'>absent</td>
+  <td><code>NIL</code></td>
+</tr>
+<tr>
+  <td align='right'>497</td>
+  <td><code>afar</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>afar</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>afar</code></td>
+  <td class='present'>present</td>
+  <td><code>afar</code></td>
+</tr>
+<tr>
+  <td align='right'>498</td>
+  <td><code>afeard</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>afeard</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>afeard</code></td>
+  <td class='present'>present</td>
+  <td><code>afeard</code></td>
+</tr>
+<tr>
+  <td align='right'>499</td>
+  <td><code>afeared</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>afear</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>afear</code></td>
+  <td class='absent'>absent</td>
+  <td><code>NIL</code></td>
+</tr>
+<tr>
+  <td align='right'>500</td>
+  <td><code>afer</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>afer</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>afer</code></td>
+  <td class='present'>present</td>
+  <td><code>afer</code></td>
+</tr>
+</tbody>
+</table>
+
+<script language="javascript" type="text/javascript">
+//<![CDATA[
+	setFilterGrid( "Outcomes", {
+	 	grid: true,
+		paging: true,
+		paging_length: 200,
+		rows_counter: true,
+                col_0: "none",
+                col_2: "select",
+                col_4: "select",
+                col_6: "select",
+		loader: true,
+		loader_text: "Filtering data..."
+	}, 0 );
+//]]>
+</script>
+
+
+<h2>Implementation Details</h2>
+
+<p>The following source code is from the Common Lisp implementation of Porter<sup>3</sup>. It is
+provided under the same open source licencing terms and conditions as Porter<sup>1</sup>. 
+Porter<sup>3</sup> is running under LispWorks 6.1 and Allegro Common Lisp 10.0.</p>
+
+<h3>Word Validators</h3>
+
+<p>At the core of Porter<sup>3</sup> is a word validator implemented using a hash table of word symbols. 
+During development using LispWorks the hash-table <em>test</em> 
+was <code>#'string-equal</code> but this is not portable (to other Lisp machines, 
+Allegro Common Lisp, for example) and the table test was changed to use <code>#'eq</code>
+which tests its two arguments for identical objects. 
+This neccessated a word normalizing function since the eq function does not test for string
+equality. The <code>normalize</code> method returns a word in the form of a standardized 
+Lisp symbol after conversion to uppercase. 
+The valid word forms table is only loaded if it is needed (i.e. when the first call is made to the validator). 
+The dynamic variable <code>*porter-source-file*</code> is assigned to the path name to the Porter<sup>3</sup>
+source file location to obtain the location of the word lists (which are assumed to be in the same directory
+as the source file).</p>
+
+<pre class="prettyprint lang-lisp">
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defvar *porter-source-file* (load-time-value (or #.*compile-file-pathname* *load-pathname*)))
+  (defvar *porter-data-directory* (merge-pathnames "data/" *porter-source-file*)))
+
+(defvar words (make-hash-table :test #'eq))
+
+(defgeneric normalize (word) 
+  "Return a symbol to be used to test whether WORD is valid.")
+
+(defmethod normalize ((word string))
+  (intern (string-upcase word)))
+
+(defmethod normalize ((word symbol))
+  word)
+
+(defun read-valid-words (&optional (path (merge-pathnames 
+                                          "porter-stemmer-words.txt"
+                                          *porter-data-directory*)))
+  ;; load in the valid words from the data directory, and irregular forms, and stopwords.
+  (clrhash words)
+  (with-open-file (wordsin path)
+    (loop
+      for line = (read-line wordsin nil nil)
+      while line do
+      (setf (gethash (normalize line) words) t))
+    (load-irregulars)
+    (load-stopwords)
+    words))
+
+(defun is-a-word (str)
+  ;; Load the valid words unless they have already been loaded. Test if word is valid.
+  (if (zerop (hash-table-count words))
+      (read-valid-words))
+  (gethash (normalize str) words))
+</pre>
+
+<h3>Porter<sup>1</sup> Compatiblity</h3>
+
+<p>The core function of the Porter Stemmer has been modified so that while returning exactly the same results as
+Porter<sup>1</sup> (if the original entry point is called), it can also restrict results using
+a validation function. 
+The new main entry point into the stemmer is <code>stem-to-valid-word</code> which expects to be given
+a word to check and which may be supplied with a validation function and a qualifier: <code>exclusive</code>
+that precludes the input word from being treated as a valid stem; even if it is a valid word.
+This functionality was used to build the current list of valid words. As you can see from the Common Lisp
+below, if a <code>validate</code> function is not passed to stem-to-valid-word, the default validator is
+used. Porter<sup>1</sup> output is enabled if the stemmer is passed an explicit value of <code>NIL</code> for
+the validator.</p>
+
+<pre>
+(defun final-step (str validate)
+  ;; VALIDATE should return a non-NIL result when passed a word which is a real word
+  (let ((backup (copy-seq str)))
+    (if (funcall validate str)
+        (return-from final-step str))
+    (let ((len (fill-pointer str)))
+      (cond
+       ((ends str "eress")         (setto str "erer")) ; adulteress
+       ((doublec str (1- len))     (decf (fill-pointer str))) ; occurrence
+       ((ends str "elv")           (setto str "elf")) ; yourselves
+       ;;((ends str "ie")            (setto str "y"))
+       ((ends str "i")             (setto str "y")) ; victorious
+       ((ends str "e")             ;;(format t "final-step e ~s > ~s~%" backup str) 
+        (setto str ""))
+       ((ends str "y")             (setto str "ie")) ; blew up with non-extendable vector
+       ((ends str "est")           (setto str "")) ; wouldest, bravest
+       ((ends str "eth")           (setto str "")) ; vieweth
+       ((ends str "men")           (setto str "man")) ; tradesmen
+       )
+      ;;(format t "final-step str ~a backup ~a~%" str backup)
+      (unless (funcall validate str)
+        (setf len (fill-pointer str))
+        (cond 
+         ((ends str "e")             (decf (fill-pointer str))) ; talkest
+         ((doublec str (1- len))     (decf (fill-pointer str)))
+         ((not (ends str "e"))       (setto str "e")))
+        (unless (funcall validate str)
+          ;; nothing worked so restore str to whatever it was when we entered this routine
+          (replace str backup :start1 0 :end1 (length str) :start2 0 :end2 (length backup))))))
+  str)
+</pre>
+
+<pre>
+  
+;; STEM is intended to provide Porter Stemming with the same results as Porter Stemmer 1.01 
+(defun stem (str)
+  (stem-to-valid-word str :validate nil))
+
+
+(defmethod stem-to-valid-word ((str string) &key (validate #'is-a-word) (exclusive t))
+  (let ((len (length str))
+        (inflected-word (string-downcase str)))
+    ;; Strings of length < 3 don't go through the stemming process, 
+    ;; although no mention is made of this in the published algorithm.
+    ;; Remove the line to match the published algorithm.
+    ;;
+    ;; VALIDATE is an optional function that should return a non-NIL result
+    ;; if the argument is valid.
+    ;;
+    ;; If EXCLUSIVE is True, STR is not a valid result, even if it is a
+    ;; valid stem for other words.
+    
+    (block nil
+      (if (find-if-not #'alpha-char-p str)
+          (return (values str "non-alphabetic")))
+      (if (<= len 2)
+          (return (values str "undersize"))) ; /*-DEPARTURE-*/
+      (setf str (make-array len 
+                            :element-type 'character
+                            :adjustable t
+                            :fill-pointer len 
+                            :initial-contents inflected-word))
+      (cond
+       (validate
+        ;; Enable stemming to the first valid word
+        (let ((validator (if exclusive 
+                             #'(lambda(word) (and (string/= word inflected-word) 
+                                                  (funcall validate word)))
+                           validate)))
+          (if (or 
+               (funcall validator str)
+               (funcall validator (step1ab str))
+               (funcall validator (step1c str))
+               (funcall validator (step2 str))
+               (funcall validator (step3 str))
+               (funcall validator (step4 str))
+               (funcall validator (step5 str))
+               (funcall validator (final-step str validator)))
+              (values str                      
+                      (if (string-equal str inflected-word)
+                          "present"
+                        "stemmed"))
+            (values nil "absent"))))
+       (t
+        ;; Porter Stemmer 1.01: execute the stemming rules to get the shortest stem
+        (step1ab str)
+        (step1c str)
+        (step2 str)
+        (step3 str)
+        (step4 str)
+        (step5 str)
+        str)))))
+</pre>
+
+<h2>One more step</h2>
+
+<p>Porter<sup>1</sup> produces output strings that are not valid words although this is not really a 
+problem for general Information Retrieval applications such as indexing because the stemming results are
+usually opaque and all the related words tend to be conflated into one word. However, Linguistics 
+applications benefit from a less agressive stemming treatment (i.e. not simply getting the shortest
+possible stem). For this purpose a new stemming function, <code>final-step</code>, was added to 
+Porter<sup>3</sup> to resolve base forms from the carnage of suffix stripping.</p>
+
+<pre>
+(defun final-step (str validate)
+  ;; VALIDATE should return a non-NIL result when passed a word which is a real word
+  (let ((backup (copy-seq str)))
+    (if (funcall validate str)
+        (return-from final-step str))
+    (let ((len (fill-pointer str)))
+      (cond
+       ((ends str "eress")         (setto str "erer"))
+       ((doublec str (1- len))     (decf (fill-pointer str)))
+       ((ends str "elv")           (setto str "elf")) ; yourselves
+       ((ends str "ie")            (setto str "y"))
+       ((ends str "i")             (setto str "y"))
+       ((ends str "e")             (setto str ""))
+       ((ends str "+y")             (setto str "ie")) ; blew up with non-extendable vector
+       ((ends str "est")           (setto str "")) ; wouldest, bravest
+       ((ends str "eth")           (setto str "")) ; vieweth
+       ((ends str "men")           (setto str "man")) ; tradesmen
+       )
+      ;;(format t "final-step str ~a backup ~a~%" str backup)
+      (unless (funcall validate str)
+        (setf len (fill-pointer str))
+        (cond 
+         ((ends str "e")             (decf (fill-pointer str))) ; talkest
+         ((doublec str (1- len))     (decf (fill-pointer str)))
+         ((not (ends str "e"))       (setto str "e")))
+        (unless (funcall validate str)
+          ;; nothing worked so restore str to whatever it was when we entered this routine
+          (replace str backup :start1 0 :end1 (length str) :start2 0 :end2 (length backup))))))
+  str)
+</pre>
+
+<p>When a validator is used, the stemmer checks the progressive results from the stemming rules until there
+are no more rules</p>
+
+<h2>Preparing the Stemmer</h2>
+
+<p>The best results from Stemmer 3.0 would be obtained from a pure set of valid stems, preferably 
+from a reliable source that maintains the list. Such a set of stems would maximize the number of correctly 
+<em>stemmed</em> words and minimize the number of <em>present</em> and <em>absent</em> words. 
+In the absence of a good list of word stems, the following code was used to reduce the 
+<a href='http://gcide.gnu.org.ua/'>GCIDE</a> list of entries by about 30,000 words to a final word 
+count of 93231. This means a significant improvement in stemming even if some stems such as "ace" 
+must be reinstated if they are not to be stemmed to "ac".</p>
+
+<p>The word reduction routine (<code>reduce-words</code>) takes a filename and loads its
+contents into the table of words (as it would for normal stemming). Each word is stemmed
+to obtain a word that is a candidate for a corresponding stem or it is assumed to be
+a stem form itself.
+Reduction continues until there are no changes in the size of
+the table of stems after stemming all the table entries in a complete iteration. 
+If there is a change, the previous table is cleared out and the new table
+is put into place ready for another pass of stemming. 
+When the table of stems stabilises, the final entries are collected and the sorted list of
+stems gets written out to a new file.</p>
+
+<pre>
+
+(defun stem-valid-word (word) 
+  "If word can be stemmed return the stem, otherwise return the input word."
+  (or (stem-to-valid-word word :validate #'is-a-word :exclusive t)
+      word))
+
+(defun write-words (wordtable name)    
+  (let ((word-list (loop for word being the hash-keys of wordtable collect word)))
+    (with-open-file (out (merge-pathnames name *PORTER-SOURCE-FILE*) 
+                         :direction :output
+                         :if-exists :supersede)
+      (dolist (word (sort word-list #'string<))
+        (format out "~a~%" word)))
+    (format t "Wrote ~d words to ~a~%" (hash-table-count wordtable) name)))
+
+
+(defun reduce-words ()
+  "This is a maintenance routine that reduces the valid words to those that can't be stemmed."
+  (let ((wordtable (make-hash-table :test #'eq)))
+    (read-valid-words (merge-pathnames "porter-stemmer-words-gcide.txt" *porter-source-file*))
+    (let ((pass 0))
+      (loop
+        (format t "Pass ~d vocabulary: ~d words~%" (incf pass) (hash-table-count words))
+        (maphash
+         #'(lambda(word value) (declare (ignore value))
+             (setf (gethash (normalize (stem-valid-word word)) wordtable) :word))
+         words)
+        (when (= (hash-table-count wordtable) (hash-table-count words)) (return))
+        (clrhash words)
+        (setf words wordtable)
+        (write-words wordtable (format nil "words-reduced-pass-~d.txt" pass))
+        (setf wordtable (make-hash-table :test #'eq)))
+      (format t "Completed vocabulary reduction: ~d words~%" (hash-table-count wordtable)))))
+</pre>
+
+<pre>
+PSTEM(7): (REDUCE-WORDS)
+Pass 1 vocabulary: 129474 words
+Wrote 96327 words to words-reduced-pass-1.txt
+Pass 2 vocabulary: 96327 words
+Wrote 93476 words to words-reduced-pass-2.txt
+Pass 3 vocabulary: 93476 words
+Wrote 93237 words to words-reduced-pass-3.txt
+Pass 4 vocabulary: 93237 words
+Wrote 93231 words to words-reduced-pass-4.txt
+Pass 5 vocabulary: 93231 words
+Completed vocabulary reduction: 93231 words
+</pre>
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+<p>Perhaps the best criterion for removing suffixes from two words W1 and W2 to
+produce a single stem S, is to say that we do so if there appears to be no
+difference between the two statements `a document is about W1' and `a
+document is about W2'. So if W1=`CONNECTION' and W2=`CONNECTIONS' it seems
+very reasonable to conflate them to a single stem. But if W1=`RELATE' and
+W2=`RELATIVITY' it seems perhaps unreasonable, especially if the document
+collection is concerned with theoretical physics. (It should perhaps be
+added that RELATE and RELATIVITY <em>are</em> conflated together in the algorithm
+described here.) Between these two extremes there is a continuum of
+different cases, and given two terms W1 and W2, there will be some variation
+in opinion as to whether they should be conflated, just as there is with
+deciding the relevance of some document to a query. The evaluation of the
+worth of a suffix stripping system is correspondingly difficult.</p>
+
+<p>The second point is that with the approach adopted here, i.e. the use of a
+suffix list with various rules, the success rate for the suffix stripping
+will be significantly less than 100% irrespective of how the process is
+evaluated. For example, if SAND and SANDER get conflated, so most probably
+will WAND and WANDER. The error here is that the -ER of WANDER has been
+treated as a suffix when in fact it is part of the stem. Equally, a suffix
+may completely alter the meaning of a word, in which case its removal is
+unhelpful. PROBE and PROBATE for example, have quite distinct meanings in
+modern English. (In fact these would not be conflated in our present
+algorithm.) There comes a stage in the development of a suffix stripping
+program where the addition of more rules to increase the performance in one
+area of the vocabulary causes an equal degradation of performance elsewhere.
+Unless this phenomenon is noticed in time, it is very easy for the program
+to become much more complex than is really necessary. It is also easy to
+give undue emphasis to cases which appear to be important, but which turn ut
+to be rather rare. For example, cases in which the root of a word changes
+with the addition of a suffix, as in DECEIVE/DECEPTION, RESUME/RESUMPTION,
+INDEX/INDICES occur much more rarely in real vocabularies than one might at
+first suppose. In view of the error rate that must in any case be expected,
+it did not seem worthwhile to try and cope with these cases.</p>
+
+<p>It is not obvious that the simplicity of the present program is any demerit.
+In a test on the well-known Cranfield 200 collection<sup>7</sup> it gave an
+improvement in retrieval performance when compared with a very much more
+elaborate program which has been in use in IR research in Cambridge since
+1971<sup>(2,6)</sup>. The test was done as follows: the words of the titles and
+abstracts in the documents were passed through the earlier suffix stripping
+system, and the resultis stems were used to index the documents. The words
+of the queries were reduced to stems in the same way, and the documents were
+ranked for each query using term coordination matching of query against
+document. From these rankings, recall and precision values were obtained
+using the standard recall cutoff method. The entire process was then
+repeated using the suffix stripping system described in this paper, and the
+results were as follows:</p>
+
+<pre>
+        earlier system        present system
+        --------------        --------------
+      precision  recall     precision  recall
+           0      57.24          0      58.60
+          10      56.85         10      58.13
+          20      52.85         20      53.92
+          30      42.61         30      43.51
+          40      42.20         40      39.39
+          50      39.06         50      38.85
+          60      32.86         60      33.18
+          70      31.64         70      31.19
+          80      27.15         80      27.52
+          90      24.59         90      25.85
+         100      24.59        100      25.85
+</pre>
+
+<p>Cleary, the performance is not very different. The important point is that
+the earlier, more elaborate system certainly performs no better than the
+present, simple system.</p>
+
+<p>(This test was done by prof. C.J. van Rijsbergen.)</p>
+
+<h2>2. THE ALGORITHM</h2>
+
+<p>To present the suffix stripping algorithm in its entirety we will need a few
+difinitions.</p>
+
+<p>A <em>consonant</em> in a word is a letter other than A, E, I, O or U, and other
+than Y preceded by a consonant. (The fact that the term `consonant' is
+defined to some extent in terms of itself does not make it ambiguous.) So in
+TOY the consonants are T and Y, and in SYZYGY they are S, Z and G. If a
+letter is not a consonant it is a <em>vowel</em>.</p>
+
+<p>A consonant will be denoted by c, a vowel by v. A list ccc... of length
+greater than 0 will be denoted by C, and a list vvv... of length greater
+than 0 will be denoted by V. Any word, or part of a word, therefore has one
+of the four forms:</p>
+
+<pre>
+    CVCV ... C
+    CVCV ... V
+    VCVC ... C
+    VCVC ... V
+</pre>
+
+<p>These may all be represented by the single form</p>
+
+<pre>
+    [C]VCVC ... [V]
+</pre>
+
+<p>where the square brackets denote arbitrary presence of their contents.
+Using (VC){m} to denote VC repeated m times, this may again be written as</p>
+
+<pre>
+    [C](VC){m}[V].
+</pre>
+
+<p>m will be called the <em>measure</em> of any word or word part when represented in
+this form. The case m = 0 covers the null word. Here are some examples:</p>
+<pre>
+    m=0    TR,  EE,  TREE,  Y,  BY.
+    m=1    TROUBLE,  OATS,  TREES,  IVY.
+    m=2    TROUBLES,  PRIVATE,  OATEN,  ORRERY.
+</pre>
+
+<p>The <em>rules</em> for removing a suffix will be given in the form</p>
+<pre>
+    (condition) S1 -> S2
+</pre>
+
+<p>This means that if a word ends with the suffix S1, and the stem before S1
+satisfies the given condition, S1 is replaced by S2. The condition is
+usually given in terms of m, e.g.</p>
+<pre>
+    (m > 1) EMENT ->
+</pre>
+
+<p>Here S1 is `EMENT' and S2 is null. This would map REPLACEMENT to REPLAC,
+since REPLAC is a word part for which m = 2.</p>
+
+<p>The `condition' part may also contain the following:</p>
+<pre>
+*S  - the stem ends with S (and similarly for the other letters).
+
+*v* - the stem contains a vowel.
+
+*d  - the stem ends with a double consonant (e.g. -TT, -SS).
+
+*o  - the stem ends cvc, where the second c is not W, X or Y (e.g.
+       -WIL, -HOP).
+</pre>
+
+<p>And the condition part may also contain expressions with <em>and</em>, <em>or</em> and
+<em>not</em>, so that
+<pre>
+    (m>1 and (*S or *T))
+</pre>
+<p>tests for a stem with m>1 ending in S or T, while</p>
+<pre>
+    (*d and not (*L or *S or *Z))
+</pre>
+<p>tests for a stem ending witha double consonant other than L, S or Z.
+Elaborate conditions like this are required only rarely.</p>
+
+<p>In a set of rules written beneath each other, only one is obeyed, and this
+will be the one with the longest matching S1 for the given word. For
+example, with</p>
+<pre>
+    SSES -> SS
+    IES  -> I
+    SS   -> SS
+    S    ->
+</pre>
+<p>(here the conditions are all null) CARESSES maps to CARESS since SSES is
+the longest match for S1. Equally CARESS maps to CARESS (S1=`SS') and CARES
+to CARE (S1=`S').</p>
+
+<p>In the rules below, examples of their application, successful or otherwise,
+are given on the right in lower case. The algorithm now follows:</p>
+<pre>
+Step 1a
+
+    SSES -> SS                         caresses  ->  caress
+    IES  -> I                          ponies    ->  poni
+                                       ties      ->  ti
+    SS   -> SS                         caress    ->  caress
+    S    ->                            cats      ->  cat
+
+Step 1b
+
+    (m>0) EED -> EE                    feed      ->  feed
+                                       agreed    ->  agree
+    (*v*) ED  ->                       plastered ->  plaster
+                                       bled      ->  bled
+    (*v*) ING ->                       motoring  ->  motor
+                                       sing      ->  sing
+</pre>
+<p>If the second or third of the rules in Step 1b is successful, the following
+is done:</p>
+<pre>
+    AT -> ATE                       conflat(ed)  ->  conflate
+    BL -> BLE                       troubl(ed)   ->  trouble
+    IZ -> IZE                       siz(ed)      ->  size
+    (*d and not (*L or *S or *Z))
+       -> single letter
+                                    hopp(ing)    ->  hop
+                                    tann(ed)     ->  tan
+                                    fall(ing)    ->  fall
+                                    hiss(ing)    ->  hiss
+                                    fizz(ed)     ->  fizz
+    (m=1 and *o) -> E               fail(ing)    ->  fail
+                                    fil(ing)     ->  file
+</pre>
+<p>The rule to map to a single letter causes the removal of one of the double
+letter pair. The -E is put back on -AT, -BL and -IZ, so that the suffixes
+-ATE, -BLE and -IZE can be recognised later. This E may be removed in step
+4.</p>
+<pre>
+Step 1c
+
+    (*v*) Y -> I                    happy        ->  happi
+                                    sky          ->  sky
+</pre>
+<p>Step 1 deals with plurals and past participles. The subsequent steps are
+much more straightforward.</p>
+<pre>
+Step 2
+
+    (m>0) ATIONAL ->  ATE           relational     ->  relate
+    (m>0) TIONAL  ->  TION          conditional    ->  condition
+                                    rational       ->  rational
+    (m>0) ENCI    ->  ENCE          valenci        ->  valence
+    (m>0) ANCI    ->  ANCE          hesitanci      ->  hesitance
+    (m>0) IZER    ->  IZE           digitizer      ->  digitize
+    (m>0) ABLI    ->  ABLE          conformabli    ->  conformable
+    (m>0) ALLI    ->  AL            radicalli      ->  radical
+    (m>0) ENTLI   ->  ENT           differentli    ->  different
+    (m>0) ELI     ->  E             vileli        - >  vile
+    (m>0) OUSLI   ->  OUS           analogousli    ->  analogous
+    (m>0) IZATION ->  IZE           vietnamization ->  vietnamize
+    (m>0) ATION   ->  ATE           predication    ->  predicate
+    (m>0) ATOR    ->  ATE           operator       ->  operate
+    (m>0) ALISM   ->  AL            feudalism      ->  feudal
+    (m>0) IVENESS ->  IVE           decisiveness   ->  decisive
+    (m>0) FULNESS ->  FUL           hopefulness    ->  hopeful
+    (m>0) OUSNESS ->  OUS           callousness    ->  callous
+    (m>0) ALITI   ->  AL            formaliti      ->  formal
+    (m>0) IVITI   ->  IVE           sensitiviti    ->  sensitive
+    (m>0) BILITI  ->  BLE           sensibiliti    ->  sensible
+</pre>
+<p>The test for the string S1 can be made fast by doing a program switch on
+the penultimate letter of the word being tested. This gives a fairly even
+breakdown of the possible values of the string S1. It will be seen in fact
+that the S1-strings in step 2 are presented here in the alphabetical order
+of their penultimate letter. Similar techniques may be applied in the other
+steps.</p>
+<pre>
+Step 3
+
+    (m>0) ICATE ->  IC              triplicate     ->  triplic
+    (m>0) ATIVE ->                  formative      ->  form
+    (m>0) ALIZE ->  AL              formalize      ->  formal
+    (m>0) ICITI ->  IC              electriciti    ->  electric
+    (m>0) ICAL  ->  IC              electrical     ->  electric
+    (m>0) FUL   ->                  hopeful        ->  hope
+    (m>0) NESS  ->                  goodness       ->  good
+
+Step 4
+
+    (m>1) AL    ->                  revival        ->  reviv
+    (m>1) ANCE  ->                  allowance      ->  allow
+    (m>1) ENCE  ->                  inference      ->  infer
+    (m>1) ER    ->                  airliner       ->  airlin
+    (m>1) IC    ->                  gyroscopic     ->  gyroscop
+    (m>1) ABLE  ->                  adjustable     ->  adjust
+    (m>1) IBLE  ->                  defensible     ->  defens
+    (m>1) ANT   ->                  irritant       ->  irrit
+    (m>1) EMENT ->                  replacement    ->  replac
+    (m>1) MENT  ->                  adjustment     ->  adjust
+    (m>1) ENT   ->                  dependent      ->  depend
+    (m>1 and (*S or *T)) ION ->     adoption       ->  adopt
+    (m>1) OU    ->                  homologou      ->  homolog
+    (m>1) ISM   ->                  communism      ->  commun
+    (m>1) ATE   ->                  activate       ->  activ
+    (m>1) ITI   ->                  angulariti     ->  angular
+    (m>1) OUS   ->                  homologous     ->  homolog
+    (m>1) IVE   ->                  effective      ->  effect
+    (m>1) IZE   ->                  bowdlerize     ->  bowdler
+</pre>
+<p>The suffixes are now removed. All that remains is a little tidying up.</p>
+<pre>
+Step 5a
+
+    (m>1) E     ->                  probate        ->  probat
+                                    rate           ->  rate
+    (m=1 and not *o) E ->           cease          ->  ceas
+
+Step 5b
+
+    (m > 1 and *d and *L) -> single letter
+                                    controll       ->  control
+                                    roll           ->  roll
+</pre>
+<p>The algorithm is careful not to remove a suffix when the stem is too short,
+the length of the stem being given by its measure, m. There is no linguistic
+basis for this approach. It was merely observed that m could be used quite
+effectively to help decide whether or not it was wise to take off a suffix.
+For example, in the following two lists:</p>
+<pre>
+                  list A        list B
+                  ------        ------
+                  RELATE        DERIVATE
+                  PROBATE       ACTIVATE
+                  CONFLATE      DEMONSTRATE
+                  PIRATE        NECESSITATE
+                  PRELATE       RENOVATE
+</pre>
+<p>-ATE is removed from the list B words, but not from the list A words. This
+means that the pairs DERIVATE/DERIVE, ACTIVATE/ACTIVE, DEMONSTRATE/DEMONS-
+TRABLE, NECESSITATE/NECESSITOUS, will conflate together. The fact that no
+attempt is made to identify prefixes can make the results look rather
+inconsistent. Thus PRELATE does not lose the -ATE, but ARCHPRELATE becomes
+ARCHPREL. In practice this does not matter too much, because the presence of
+the prefix decreases the probability of an erroneous conflation.</p>
+
+<p>Complex suffixes are removed bit by bit in the different steps. Thus
+GENERALIZATIONS is stripped to GENERALIZATION (Step 1), then to GENERALIZE
+(Step 2), then to GENERAL (Step 3), and then to GENER (Step 4). OSCILLATORS
+is stripped to OSCILLATOR (Step 1), then to OSCILLATE (Step 2), then to
+OSCILL (Step 4), and then to OSCIL (Step 5). In a vocabulary of 10,000
+words, the reduction in size of the stem was distributed among the steps as
+follows:</p>
+<pre>
+    Suffix stripping of a vocabulary of 10,000 words
+    ------------------------------------------------
+    Number of words reduced in step 1:   3597
+                  "                 2:    766
+                  "                 3:    327
+                  "                 4:   2424
+                  "                 5:   1373
+    Number of words not reduced:         3650
+</pre>
+
+<p>The resulting vocabulary of stems contained 6370 distinct entries. Thus the
+suffix stripping process reduced the size of the vocabulary by about one
+third.</p>
+
+<h2>REFERENCES</h2>
+<p>
+<ol>
+<li>PORTER, M.F. An algorithm for suffix stripping. <em>Program</em>, <em>14</em> (3) 1980 pp 130â137.</li>
+
+<li>LOVINS, J.B. Development of a Stemming Algorithm. <em>Mechanical
+    Translation and computation Linguistics</em>. <em>11</em> (1) March 1968 pp 23-31.</li>
+
+<li>ANDREWS, K. The Development of a Fast Conflation Algorithm for English.
+    <em>Dissertation for the Diploma in Computer Science</em>, Computer
+    Laboratory, University of Cambridge, 1971.</li>
+
+<li>PETRARCA, A.E. and LAY W.M. Use of an automatically generated authority
+    list to eliminate scattering caused by some singular and plural main
+    index terms. <em>Proceedings of the American Society for Information
+    Science</em>, <em>6</em> 1969 pp 277-282.</li>
+
+<li>DATTOLA, Robert T. <em>FIRST: Flexible Information Retrieval System for
+    Text</em>. Webster N.Y: Xerox Corporation, 12 Dec 1975.</li>
+
+<li>COLOMBO, D.S. and NIEHOFF R.T. <em>Final report on improved access to
+    scientific and technical information through automated vocabulary
+    switching.</em> NSF Grant No. SIS75-12924 to the National Science
+    Foundation.</li>
+
+<li>DAWSON, J.L. Suffix Removal and Word Conflation. <em>ALLC Bulletin</em>,
+    Michaelmas 1974 p.33-46.</li>
+
+<li>CLEVERDON, C.W., MILLS J. and KEEN M. <em>Factors Determining the
+    Performance of Indexing Systems</em> 2 vols. College of Aeronautics,
+    Cranfield 1966.</li>
+</ol>
+</p>
+</body>
+</html>

@@ -1,0 +1,517 @@
+Table of Contents
+*****************
+
+`local-time'
+1 Introduction
+2 Public API
+  2.1 Types
+  2.2 Timezones
+  2.3 Creating `timestamp' Objects
+  2.4 Querying `timestamp' Objects
+  2.5 Manipulating Date and Time Values
+  2.6 Parsing and Formatting
+3 Other Features
+  3.1 Reader Macros
+  3.2 Support for non-Gregorian Calendars
+4 References
+Index
+
+
+`local-time'
+************
+
+Copyright (C) 2012 Daniel Lowe <dlowe dlowe.net>
+Copyright (C) 2012 Attila Lendvai <attila.lendvai gmail.com>
+     This manual describes the `local-time' Common Lisp library which is
+     based on Erik Naggum's  _The Long, Painful History of Time_
+     [NaggumPaper] paper.
+
+
+1 Introduction
+**************
+
+The `local-time' library is a Common Lisp library for the manipulation
+of dates, times and intervals. It was originally based almost entirely
+upon Erik Naggum's paper _The Long Painful History of Time_
+[NaggumPaper].  Many of the core concepts originated from this paper,
+such as the seperation of days and seconds, the choice of 2000-03-01 as
+the standard epoch, and the timestring format.
+
+     Caveats: This implementation assumes that time zone information is
+     stored in the tzfile format. The default timezone is loaded from
+     /etc/localtime. On non-POSIX systems, this will certainly give
+     different results than the system time handling.
+
+2 Public API
+************
+
+2.1 Types
+=========
+
+It's a good idea to treat all values as immutable objects. `local-time'
+will not modify any object it was given unless explicitly asked to by
+the `:into' keyword argument.
+
+ -- Class: timestamp day sec nsec
+     `timestamp' values can represent either a _date_, a _daytime_ or a
+     _time_ value. It has the following slots:
+
+       (defclass timestamp ()
+         ((day :type integer)
+          (sec :type integer)
+          (nsec :type (integer 0 999999999))))
+
+     The following constraints apply to the specific types:
+        * _date_: must have a +UTC-ZONE+ timezone and the SEC slot must
+          be the first second of a day; In other words, the time
+          elements of the `timestamp' value must have their least
+          possible values.
+
+        * _time_: the DAY slot must be zero.
+
+
+ -- Struct: timezone path name loaded
+     `timezone' objects represent timezones - local and political
+     modifications to the time representation.  Timezones are
+     responsible for storing offsets from GMT, abbreviations for
+     different sub-timezones, and the times each sub-timezone is to be
+     in effect.
+
+
+2.2 Timezones
+=============
+
+ -- Default: *default-timezone*
+     The variable *DEFAULT-TIMEZONE* contains the timezone that will be
+     used by default if none is specified.  It is loaded from
+     _/etc/localtime_ when the library is loaded.  If _/etc/localtime_
+     is not present, it will default to UTC.
+
+
+ -- Constant: +utc-time+
+     The variable +UTC-ZONE+ contains a timezone corresponding to UTC.
+
+
+ -- Macro: define-timezone zone-name zone-file &key (load nil)
+     Define ZONE-NAME (a symbol or a string) as a new timezone,
+     lazy-loaded from ZONE-FILE (a pathname designator relative to the
+     zoneinfo directory on this system.  If LOAD is true, load
+     immediately.
+
+
+2.3 Creating `timestamp' Objects
+================================
+
+ -- Function: universal-to-timestamp universal &key (nsec 0)
+     Produces a `timestamp' instance from the provided universal time
+     UNIVERSAL.  Universal time is defined in the Common Lisp
+     Specification as the number of seconds since 1900-01-01T00:00:00Z.
+
+ -- Function: unix-to-timestamp unix &key (nsec 0)
+     Produces a `timestamp' instance from the provided unix time UNIX.
+     Unix time is defined by POSIX as the number of seconds since
+     1970-01-01T00:00:00Z.
+
+ -- Function: now
+     Produces a `timestamp' instance with the current time.  Under
+     sbcl, the new timestamp will be precise to the microsecond.
+     Otherwise, the precision is limited to the second.
+
+ -- Function: today
+     Produces a `timestamp' instance that corresponds to today's date,
+     which is the midnight of the current day in the UTC zone.
+
+ -- Function: encode-timestamp nsec sec minute hour day month year &key
+          timezone offset into
+     Returns a new `timestamp' instance corresponding to the specified
+     time elements.  The OFFSET is the number of seconds offset from
+     UTC of the locale.  If OFFSET is not specified, the offset will be
+     guessed from the TIMEZONE.  If a `timestamp' is passed as the INTO
+     argument, its value will be set and that `timestamp' will be
+     returned.  Otherwise, a new `timestamp' is created.
+
+ -- Macro: make-timestamp &key :day :sec :nsec
+     Expands to an expression that creates an instance of a `timestamp'
+     exactly as specified.
+
+ -- Macro: clone-timestamp timestamp
+     Expands to an expression that creates another copy of TIMESTAMP
+     that is `timestamp=' to it.
+
+2.4 Querying `timestamp' Objects
+================================
+
+ -- Function: day-of timestamp
+     Returns the day component of TIMESTAMP.  Although Naggum's paper
+     specifies that the day should be a signed fixnum, it is left
+     unbounded for flexibility reasons.
+
+ -- Function: sec-of timestamp
+     Returns the 'seconds' component of the time.  Valid values for the
+     seconds range from 0 to 86399.
+
+ -- Function: nsec-of timestamp
+     Returns the 'microseconds' component of the time.  Valid values for
+     the nanoseconds range from 0 to 999999999.
+
+ -- Function: timestamp-to-universal timestamp
+     This returns the date/time specified in TIMESTAMP encoded as the
+     number of seconds since January 1st, 1900 12:00am UTC.
+
+ -- Function: timestamp-to-unix timestamp
+     This returns the date/time specified in TIMESTAMP encoded as the
+     number of seconds since January 1st, 1970 12:00am UTC.  It
+     corresponds with the time received from the POSIX call `time()'.
+
+ -- Function: timestamp-subtimezone timestamp timezone
+     Returns as multiple values the time zone applicable at the given
+     time as the number of seconds east of UTC, a boolean
+     daylight-saving-p, and the customary abbreviation of the timezone.
+
+ -- Macro: with-decoded-timestamp (&key nsec sec minute hour day month
+          year day-of-week daylight-p timezone) timestamp &body body
+     This macro binds variables to the decoded elements of TIMESTAMP.
+     The timezone argument is used for decoding the timestamp, and is
+     not bound by the macro. The value of DAY-OF-WEEK starts from 0
+     which means Sunday.
+
+ -- Function: decode-timestamp timestamp
+     Returns the decoded time as `(values ns ss mm hh day month year
+     day-of-week daylight-saving-time-p timezone-offset
+     timezone-abbreviation)'.
+
+ -- Function: timestamp< time-a time-b
+ -- Function: timestamp<= time-a time-b
+ -- Function: timestamp> time-a time-b
+ -- Function: timestamp>= time-a time-b
+ -- Function: timestamp= time-a time-b
+ -- Function: timestamp/= time-a time-b
+     These comparison functions act like their string and char
+     counterparts.
+
+ -- Function: timestamp-minimum timestamp &rest timestamps
+     Returns the earliest timestamp passed to it.
+
+ -- Function: timestamp-maximum timestamp &rest timestamps
+     Returns the latest timestamp passed to it.
+
+ -- Function: timestamp-day-of-week timestamp
+     This returns the index of the day of the week, starting at 0 which
+     means Sunday.
+
+          Note: "Day of the week" is ambigous and locale dependent.
+
+ -- Function: universal-to-timestamp timestamp
+     Returns the UNIVERSAL-TIME corresponding to TIMESTAMP.
+
+          Note: Subsecond precision is not preserved.
+
+ -- Function: timestamp-millennium timestamp &key timezone
+ -- Function: timestamp-century timestamp &key timezone
+ -- Function: timestamp-decade timestamp &key timezone
+     Returns the ordinal millennium, century or decade upon which the
+     timestamp falls.  Ordinal time values start at 1, so the
+     (timestamp-century (now)) will return 21.
+
+
+ -- Function: timestamp-year timestamp &key timezone
+ -- Function: timestamp-month timestamp &key timezone
+ -- Function: timestamp-day timestamp &key timezone
+ -- Function: timestamp-hour timestamp &key timezone
+ -- Function: timestamp-minute timestamp &key timezone
+ -- Function: timestamp-second timestamp &key timezone
+ -- Function: timestamp-millisecond timestamp &key timezone
+ -- Function: timestamp-microsecond timestamp &key timezone
+ -- Function: timestamp-microsecond timestamp &key timezone
+     Returns the decoded part of the timestamp.
+
+2.5 Manipulating Date and Time Values
+=====================================
+
+ -- Function: timestamp+ time amount unit
+ -- Function: timestamp- time amount unit
+     Add or subtract the AMOUNT to the TIME using the specified UNIT.
+     UNIT may be one of ( `:nsec' `:sec' `:minute' `:hour' `:day'
+     `:month' `:year').  The value of the parts of the timestamp of
+     higher resolution than the UNIT will never be touched.  If you
+     want a precise number of seconds from a time, you should specify
+     the offset in seconds.
+
+ -- Function: timestamp-maximize-part timestamp part &key offset
+          timezone into
+     Returns a timestamp with its parts maximized up to PART.  PART can
+     be any of (:nsec :sec :min :hour :day :month).  If INTO is
+     specified, it will be modified and returned, otherwise a new
+     timestamp will be created.
+
+ -- Function: timestamp-minimize-part timestamp part &key offset
+          timezone into
+     Returns a timestamp with its parts minimized up to PART.  PART can
+     be any of (:nsec :sec :min :hour :day :month).  If INTO is
+     specified, it will be modified and returned, otherwise a new
+     timestamp will be created.
+
+ -- Macro: adjust-timestamp timestamp &body changes
+     Alters various parts of TIMESTAMP, given a list of changes.  The
+     changes are in the format `(offset part value)' and `(set part
+     value)'.
+
+       ;; Return a new `timestamp' value that points to the previous Monday
+       (adjust-timestamp (today) (offset :day-of-week :monday))
+
+       ;; Return a new `timestamp' value that points three days ahead from now
+       (adjust-timestamp (today) (offset :day 3))
+
+     Keep in mind that `adjust-timestamp' is not a mere setter for
+     fields but instead it handles overflows and timezone conversions as
+     expected. Also note that it's possible to specify multiple
+     commands.
+
+     The list of possible places to manipulate are: `:nsec' `:sec'
+     `:sec-of-day' `:minute' `:hour' `:day' `:day-of-month' `:month'
+     `:year'.
+
+ -- Macro: adjust-timestamp! timestamp &body changes
+     Just like `adjust-timestamp', but instead of returning a freshly
+     constructed value, it alters the provided TIMESTAMP value (and
+     returns it).
+
+ -- Function: timestamp-whole-year-difference time-a time-b
+     Returns the number of whole years elapsed between TIME-A and
+     TIME-B.
+
+          Note: This is useful for calculating anniversaries and
+          birthdays.
+
+ -- Function: days-in-month month year
+     Returns the number of days in a given month of the specified year.
+
+2.6 Parsing and Formatting
+==========================
+
+ -- Constant: +iso-8601-format+
+     The constant +ISO-8601-FORMAT+ is bound to a description of the
+     ISO 8601 format.  An output with this format will look like this:
+     `2008-03-01T19:42:34.608506+01:00'.  This is the default format
+     for the `format-timestring' function.
+
+
+ -- Constant: +asctime-format+
+     The constant +ASCTIME-FORMAT+ is bound to a format mirroring the
+     output of the POSIX asctime() function.  An output with this
+     format will look like this: `Sat Mar  1 19:42:34 2008'.
+
+
+ -- Constant: +rfc-1123-format+
+     The constant +RFC-1123-FORMAT+ is bound to a description of the
+     format defined in RFC 1123 for Internet timestamps.  An output
+     with this format will look like this: `Sat, 01 Mar 2008 19:42:34
+     EDT'.
+
+
+ -- Constant: +iso-week-date-format+
+     The constant +ISO-WEEK-DATE-FORMAT+ is bound to a description of
+     the ISO 8601 Week Date format.  An output with this format will
+     look like this: `2009-W53-5'.
+
+
+ -- Function: parse-timestring timestring &key (start 0) end
+          (fail-on-error t) (offset 0)
+     Parses a timestring and returns the corresponding `timestamp'.
+     Parsing begins at START and stops at the END position. If there
+     are invalid characters within `timestring' and FAIL-ON-ERROR is
+     `T', then an `invalid-timestring' error is signaled, otherwise
+     `NIL' is returned.
+
+     If there is no timezone specified in `timestring' then OFFSET is
+     used as the default timezone offset (in seconds).
+
+ -- Function: format-timestring (destination timestamp &key (format
+          +iso-8601-format+) (timezone *default-timezone*))
+     Constructs a string representation of TIMESTAMP according to
+     FORMAT and returns it.  If destination is T, the string is written
+     to *standard-output*.  If destination is a stream, the string is
+     written to the stream.
+
+     FORMAT is a list containing one or more of strings, characters,
+     and keywords.  Strings and characters are output literally, while
+     keywords are replaced by the values here:
+
+    `:year'
+          *year
+
+    `:month'
+          *numeric month
+
+    `:day'
+          *day of month
+
+    `:weekday'
+          *numeric day of week, starting from 0 which means Sunday
+
+    `:hour'
+          *hour
+
+    `:min'
+          *minutes
+
+    `:sec'
+          *seconds
+
+    `:msec'
+          *milliseconds
+
+    `:usec'
+          *microseconds
+
+    `:nsec'
+          *nanoseconds
+
+    `:iso-week-year'
+          *year for ISO week date (can be different from regular
+          calendar year)
+
+    `:iso-week-number'
+          *ISO week number (i.e. 1 through 53)
+
+    `:iso-week-day'
+          *ISO compatible weekday number (i.e. monday=1, sunday=7)
+
+    `:ordinal-day'
+          day of month as an ordinal (e.g. 1st, 23rd)
+
+    `:long-weekday'
+          long form of weekday (e.g. Sunday, Monday)
+
+    `:short-weekday'
+          short form of weekday (e.g. Sun, Mon)
+
+    `:long-month'
+          long form of month (e.g. January, February)
+
+    `:short-month'
+          short form of month (e.g. Jan, Feb)
+
+    `:hour12'
+          hour on a 12-hour clock
+
+    `:ampm'
+          am/pm marker in lowercase
+
+    `:gmt-offset'
+          the gmt-offset of the time, in +00:00 form
+
+    `:gmt-offset-or-z'
+          like :gmt-offset, but is Z when UTC
+
+    `:timezone'
+          timezone abbrevation for the time
+
+     Elements marked by * can be placed in a list in the form:
+       (:keyword padding &optional (padchar #\0))
+     The string representation of the value will be padded with the
+     padchar.
+
+     You can see examples by examining the values in +ISO-8601-FORMAT+,
+     +ASCTIME-FORMAT+, and +RFC-1123-FORMAT+.
+
+     Produces on STREAM the timestring corresponding to the TIMESTAMP
+     with the given options.  If STREAM is `nil', only returns a string
+     containing what would have been the output.  If STREAM is `t',
+     prints the string to *STANDARD-OUTPUT*.
+
+     Example output:
+       LOCAL-TIME> (format-timestring nil (now))
+       "2008-03-01T19:42:34.608506+01:00"
+
+ -- Function: format-rfc3339-timestring (destination timestamp &key
+          omit-date-part omit-time-part omit-timezone-part (use-zulu t))
+     Formats the time like format-timestring, but in RFC 3339 format.
+     The options control valid options in the RFC.
+
+3 Other Features
+****************
+
+3.1 Reader Macros
+=================
+
+ -- Function: enable-read-macros
+     Adds @TIMESTRING and #@UNIVERSAL-TIME as reader macros.
+
+3.2 Support for non-Gregorian Calendars
+=======================================
+
+ -- Function: astronomical-julian-date timestamp
+     Returns the julian date of the date portion of TIMESTAMP.
+
+ -- Function: astronomical-julian-date timestamp
+     Returns the modified julian date of the date portion of TIMESTAMP.
+
+4 References
+************
+
+   * [NaggumPaper] Erik Naggum. _The Long Painful History of Time_
+     `http://naggum.no/lugm-time.html', 1999.
+
+
+Index
+*****
+
+*default-timezone*:                            See 2.2.       (line  84)
++asctime-format+:                              See 2.6.       (line 299)
++iso-8601-format+:                             See 2.6.       (line 292)
++iso-week-date-format+:                        See 2.6.       (line 312)
++rfc-1123-format+:                             See 2.6.       (line 305)
++utc-time+:                                    See 2.2.       (line  91)
+adjust-timestamp:                              See 2.5.       (line 254)
+adjust-timestamp!:                             See 2.5.       (line 274)
+astronomical-julian-date:                      See 3.2.       (line 444)
+clone-timestamp:                               See 2.3.       (line 137)
+day-of:                                        See 2.4.       (line 144)
+days-in-month:                                 See 2.5.       (line 286)
+decode-timestamp:                              See 2.4.       (line 178)
+define-timezone:                               See 2.2.       (line  95)
+enable-read-macros:                            See 3.1.       (line 438)
+encode-timestamp:                              See 2.3.       (line 124)
+format-rfc3339-timestring:                     See 2.6.       (line 427)
+format-timestring:                             See 2.6.       (line 329)
+make-timestamp:                                See 2.3.       (line 133)
+modified-julian-date:                          See 3.2.       (line 447)
+now:                                           See 2.3.       (line 115)
+nsec-of:                                       See 2.4.       (line 153)
+parse-timestring:                              See 2.6.       (line 318)
+sec-of:                                        See 2.4.       (line 149)
+timestamp:                                     See 2.1.       (line  55)
+timestamp+:                                    See 2.5.       (line 231)
+timestamp-:                                    See 2.5.       (line 231)
+timestamp-century:                             See 2.4.       (line 209)
+timestamp-day:                                 See 2.4.       (line 217)
+timestamp-day-of-week:                         See 2.4.       (line 198)
+timestamp-decade:                              See 2.4.       (line 209)
+timestamp-hour:                                See 2.4.       (line 217)
+timestamp-maximize-part:                       See 2.5.       (line 240)
+timestamp-maximum:                             See 2.4.       (line 195)
+timestamp-microsecond:                         See 2.4.       (line 217)
+timestamp-millennium:                          See 2.4.       (line 209)
+timestamp-millisecond:                         See 2.4.       (line 217)
+timestamp-minimize-part:                       See 2.5.       (line 247)
+timestamp-minimum:                             See 2.4.       (line 192)
+timestamp-minute:                              See 2.4.       (line 217)
+timestamp-month:                               See 2.4.       (line 217)
+timestamp-second:                              See 2.4.       (line 217)
+timestamp-subtimezone:                         See 2.4.       (line 166)
+timestamp-to-universal:                        See 2.4.       (line 157)
+timestamp-to-unix:                             See 2.4.       (line 161)
+timestamp-whole-year-difference:               See 2.5.       (line 279)
+timestamp-year:                                See 2.4.       (line 217)
+timestamp/=:                                   See 2.4.       (line 183)
+timestamp<:                                    See 2.4.       (line 183)
+timestamp<=:                                   See 2.4.       (line 183)
+timestamp=:                                    See 2.4.       (line 183)
+timestamp>:                                    See 2.4.       (line 183)
+timestamp>=:                                   See 2.4.       (line 183)
+today:                                         See 2.3.       (line 120)
+universal-to-timestamp <1>:                    See 2.4.       (line 204)
+universal-to-timestamp:                        See 2.3.       (line 105)
+unix-to-timestamp:                             See 2.3.       (line 110)
+with-decoded-timestamp:                        See 2.4.       (line 171)

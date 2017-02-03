@@ -1,0 +1,3839 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Parallel Outcomes from Porter Stemmers</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" href="./style.css" />
+<style type="text/css" media="screen">
+/*====================================================
+	- HTML Table Filter stylesheet
+=====================================================*/
+@import "filtergrid.css";
+
+/*====================================================
+	- General html elements
+=====================================================*/
+body{ 
+	margin:15px; padding:5px; border:0px solid #666; background-color:#f4f4f4;
+}
+.mytable{
+	width:100%;
+        font-size:14px;
+	border:1px solid #ccc;
+        background-color:#eee;
+}
+caption{ margin:10px 0 0 5px; padding:10px; text-align:left; }
+div.tools{ margin:5px; }
+div.tools input{ background-color:#f4f4f4; border:2px outset #f4f4f4; margin:2px; }
+th{ background-color:#003366; color:#FFF; padding:2px; border:1px solid #ccc; }
+td{ padding:2px; border-bottom:1px solid #ccc; border-right:1px solid #ccc; }
+.tfoot{ background-color:#003366; color:#FFF; padding:2px; border:1px solid #ccc; }
+</style>
+<script language="javascript" type="text/javascript" src="actb.js"></script>
+<script language="javascript" type="text/javascript" src="tablefilter.js"></script>
+
+</head>
+
+<h1 align=center>Parallel Porter Stemming Outcomes: special cases<br><small>Roy Anderson<br>2016</small></h1>
+
+<p>Table. Parallel Stemming Outcomes from Porter<sup>1</sup> to Porter<sup>3</sup> in which the 
+Porter<sup>3</sup> outcome analysis is irregular or roman-numeral.</p>
+<table id='SpecialCases' class='mytable' width='600'>
+<thead>
+<tr>
+  <th width='4%' align='left'>Line</th>
+  <th width='10%' align='left'>Input</th>
+  <th width='10%' align='left'>Analysis<sup>1</sup></th>
+  <th width='10%' align='left'>Porter<sup>1</sup></th>
+  <th width='10%' align='left'>Analysis<sup>2</sup></th>
+  <th width='10%' align='left'>Porter<sup>2</sup></th>
+  <th width='10%' align='left'>Analysis<sup>3</sup></th>
+  <th width='10%' align='left'>Porter<sup>3</sup></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td align='right'>1</td>
+  <td><code>abode</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abod</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>abod</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>abide</code></td>
+</tr>
+<tr>
+  <td align='right'>2</td>
+  <td><code>alighted</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>alight</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>alight</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>alight</code></td>
+</tr>
+<tr>
+  <td align='right'>3</td>
+  <td><code>am</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>am</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>am</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>be</code></td>
+</tr>
+<tr>
+  <td align='right'>4</td>
+  <td><code>are</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>ar</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>are</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>be</code></td>
+</tr>
+<tr>
+  <td align='right'>5</td>
+  <td><code>arisen</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>arisen</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>arisen</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>arise</code></td>
+</tr>
+<tr>
+  <td align='right'>6</td>
+  <td><code>arose</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>aros</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>aros</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>arise</code></td>
+</tr>
+<tr>
+  <td align='right'>7</td>
+  <td><code>ate</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>at</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>ate</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>eat</code></td>
+</tr>
+<tr>
+  <td align='right'>8</td>
+  <td><code>awakened</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>awaken</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>awaken</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>awake</code></td>
+</tr>
+<tr>
+  <td align='right'>9</td>
+  <td><code>awoke</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>awok</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>awok</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>awake</code></td>
+</tr>
+<tr>
+  <td align='right'>10</td>
+  <td><code>bade</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>bade</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>bade</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>bid</code></td>
+</tr>
+<tr>
+  <td align='right'>11</td>
+  <td><code>beaten</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>beaten</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>beaten</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>beat</code></td>
+</tr>
+<tr>
+  <td align='right'>12</td>
+  <td><code>became</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>becam</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>becam</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>become</code></td>
+</tr>
+<tr>
+  <td align='right'>13</td>
+  <td><code>been</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>been</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>been</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>be</code></td>
+</tr>
+<tr>
+  <td align='right'>14</td>
+  <td><code>befallen</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>befallen</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>befallen</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>befall</code></td>
+</tr>
+<tr>
+  <td align='right'>15</td>
+  <td><code>befell</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>befel</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>befel</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>befall</code></td>
+</tr>
+<tr>
+  <td align='right'>16</td>
+  <td><code>began</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>began</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>began</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>begin</code></td>
+</tr>
+<tr>
+  <td align='right'>17</td>
+  <td><code>begat</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>begat</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>begat</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>beget</code></td>
+</tr>
+<tr>
+  <td align='right'>18</td>
+  <td><code>begotten</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>begotten</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>begotten</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>begot</code></td>
+</tr>
+<tr>
+  <td align='right'>19</td>
+  <td><code>begun</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>begun</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>begun</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>begin</code></td>
+</tr>
+<tr>
+  <td align='right'>20</td>
+  <td><code>beheld</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>beheld</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>beheld</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>behold</code></td>
+</tr>
+<tr>
+  <td align='right'>21</td>
+  <td><code>bent</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>bent</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>bent</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>bend</code></td>
+</tr>
+<tr>
+  <td align='right'>22</td>
+  <td><code>bereaved</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>bereav</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>bereav</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>bereave</code></td>
+</tr>
+<tr>
+  <td align='right'>23</td>
+  <td><code>bereft</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>bereft</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>bereft</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>bereave</code></td>
+</tr>
+<tr>
+  <td align='right'>24</td>
+  <td><code>besought</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>besought</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>besought</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>beseech</code></td>
+</tr>
+<tr>
+  <td align='right'>25</td>
+  <td><code>betaken</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>betaken</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>betaken</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>betake</code></td>
+</tr>
+<tr>
+  <td align='right'>26</td>
+  <td><code>bethought</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>bethought</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>bethought</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>bethink</code></td>
+</tr>
+<tr>
+  <td align='right'>27</td>
+  <td><code>betook</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>betook</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>betook</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>betake</code></td>
+</tr>
+<tr>
+  <td align='right'>28</td>
+  <td><code>bidden</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>bidden</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>bidden</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>bid</code></td>
+</tr>
+<tr>
+  <td align='right'>29</td>
+  <td><code>bit</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>bit</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>bit</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>bite</code></td>
+</tr>
+<tr>
+  <td align='right'>30</td>
+  <td><code>bitten</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>bitten</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>bitten</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>bite</code></td>
+</tr>
+<tr>
+  <td align='right'>31</td>
+  <td><code>bled</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>bled</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>bled</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>bleed</code></td>
+</tr>
+<tr>
+  <td align='right'>32</td>
+  <td><code>blew</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>blew</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>blew</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>blow</code></td>
+</tr>
+<tr>
+  <td align='right'>33</td>
+  <td><code>blown</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>blown</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>blown</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>blow</code></td>
+</tr>
+<tr>
+  <td align='right'>34</td>
+  <td><code>bore</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>bore</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>bore</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>bear</code></td>
+</tr>
+<tr>
+  <td align='right'>35</td>
+  <td><code>born</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>born</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>born</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>bear</code></td>
+</tr>
+<tr>
+  <td align='right'>36</td>
+  <td><code>borne</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>born</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>born</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>bear</code></td>
+</tr>
+<tr>
+  <td align='right'>37</td>
+  <td><code>bought</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>bought</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>bought</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>buy</code></td>
+</tr>
+<tr>
+  <td align='right'>38</td>
+  <td><code>bound</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>bound</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>bound</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>bind</code></td>
+</tr>
+<tr>
+  <td align='right'>39</td>
+  <td><code>bred</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>bred</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>bred</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>breed</code></td>
+</tr>
+<tr>
+  <td align='right'>40</td>
+  <td><code>broke</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>broke</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>broke</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>break</code></td>
+</tr>
+<tr>
+  <td align='right'>41</td>
+  <td><code>broken</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>broken</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>broken</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>break</code></td>
+</tr>
+<tr>
+  <td align='right'>42</td>
+  <td><code>brought</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>brought</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>brought</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>bring</code></td>
+</tr>
+<tr>
+  <td align='right'>43</td>
+  <td><code>built</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>built</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>built</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>build</code></td>
+</tr>
+<tr>
+  <td align='right'>44</td>
+  <td><code>burned</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>burn</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>burn</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>burn</code></td>
+</tr>
+<tr>
+  <td align='right'>45</td>
+  <td><code>burnt</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>burnt</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>burnt</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>burn</code></td>
+</tr>
+<tr>
+  <td align='right'>46</td>
+  <td><code>busted</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>bust</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>bust</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>bust</code></td>
+</tr>
+<tr>
+  <td align='right'>47</td>
+  <td><code>came</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>came</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>came</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>come</code></td>
+</tr>
+<tr>
+  <td align='right'>48</td>
+  <td><code>caught</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>caught</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>caught</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>catch</code></td>
+</tr>
+<tr>
+  <td align='right'>49</td>
+  <td><code>chose</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>chose</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>chose</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>choose</code></td>
+</tr>
+<tr>
+  <td align='right'>50</td>
+  <td><code>chosen</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>chosen</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>chosen</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>choose</code></td>
+</tr>
+<tr>
+  <td align='right'>51</td>
+  <td><code>clad</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>clad</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>clad</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>clothe</code></td>
+</tr>
+<tr>
+  <td align='right'>52</td>
+  <td><code>clapped</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>clap</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>clap</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>clap</code></td>
+</tr>
+<tr>
+  <td align='right'>53</td>
+  <td><code>clothed</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>cloth</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>cloth</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>clothe</code></td>
+</tr>
+<tr>
+  <td align='right'>54</td>
+  <td><code>clung</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>clung</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>clung</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>cling</code></td>
+</tr>
+<tr>
+  <td align='right'>55</td>
+  <td><code>could</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>could</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>could</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>can</code></td>
+</tr>
+<tr>
+  <td align='right'>56</td>
+  <td><code>crept</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>crept</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>crept</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>creep</code></td>
+</tr>
+<tr>
+  <td align='right'>57</td>
+  <td><code>cut</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>cut</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>cut</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>cut</code></td>
+</tr>
+<tr>
+  <td align='right'>58</td>
+  <td><code>dared</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>dare</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>dare</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>dare</code></td>
+</tr>
+<tr>
+  <td align='right'>59</td>
+  <td><code>dealt</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>dealt</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>dealt</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>deal</code></td>
+</tr>
+<tr>
+  <td align='right'>60</td>
+  <td><code>di</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>di</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>di</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>di</code></td>
+</tr>
+<tr>
+  <td align='right'>61</td>
+  <td><code>did</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>did</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>did</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>do</code></td>
+</tr>
+<tr>
+  <td align='right'>62</td>
+  <td><code>disproved</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>disprov</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>disprov</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>disprove</code></td>
+</tr>
+<tr>
+  <td align='right'>63</td>
+  <td><code>dived</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>dive</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>dive</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>dive</code></td>
+</tr>
+<tr>
+  <td align='right'>64</td>
+  <td><code>does</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>doe</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>doe</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>do</code></td>
+</tr>
+<tr>
+  <td align='right'>65</td>
+  <td><code>done</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>done</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>done</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>do</code></td>
+</tr>
+<tr>
+  <td align='right'>66</td>
+  <td><code>dove</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>dove</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>dove</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>dive</code></td>
+</tr>
+<tr>
+  <td align='right'>67</td>
+  <td><code>drank</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>drank</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>drank</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>drink</code></td>
+</tr>
+<tr>
+  <td align='right'>68</td>
+  <td><code>drawn</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>drawn</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>drawn</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>draw</code></td>
+</tr>
+<tr>
+  <td align='right'>69</td>
+  <td><code>dreamed</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>dream</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>dream</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>dream</code></td>
+</tr>
+<tr>
+  <td align='right'>70</td>
+  <td><code>dreamt</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>dreamt</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>dreamt</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>dream</code></td>
+</tr>
+<tr>
+  <td align='right'>71</td>
+  <td><code>drew</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>drew</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>drew</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>draw</code></td>
+</tr>
+<tr>
+  <td align='right'>72</td>
+  <td><code>driven</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>driven</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>driven</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>drive</code></td>
+</tr>
+<tr>
+  <td align='right'>73</td>
+  <td><code>drove</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>drove</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>drove</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>drive</code></td>
+</tr>
+<tr>
+  <td align='right'>74</td>
+  <td><code>drunk</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>drunk</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>drunk</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>drink</code></td>
+</tr>
+<tr>
+  <td align='right'>75</td>
+  <td><code>dug</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>dug</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>dug</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>dig</code></td>
+</tr>
+<tr>
+  <td align='right'>76</td>
+  <td><code>durst</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>durst</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>durst</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>dare</code></td>
+</tr>
+<tr>
+  <td align='right'>77</td>
+  <td><code>dwelt</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>dwelt</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>dwelt</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>dwell</code></td>
+</tr>
+<tr>
+  <td align='right'>78</td>
+  <td><code>eaten</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>eaten</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>eaten</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>eat</code></td>
+</tr>
+<tr>
+  <td align='right'>79</td>
+  <td><code>fallen</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>fallen</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>fallen</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>fall</code></td>
+</tr>
+<tr>
+  <td align='right'>80</td>
+  <td><code>fed</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>fed</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>fed</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>feed</code></td>
+</tr>
+<tr>
+  <td align='right'>81</td>
+  <td><code>fell</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>fell</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>fell</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>fall</code></td>
+</tr>
+<tr>
+  <td align='right'>82</td>
+  <td><code>felt</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>felt</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>felt</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>feel</code></td>
+</tr>
+<tr>
+  <td align='right'>83</td>
+  <td><code>fitted</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>fit</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>fit</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>fit</code></td>
+</tr>
+<tr>
+  <td align='right'>84</td>
+  <td><code>fled</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>fled</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>fled</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>flee</code></td>
+</tr>
+<tr>
+  <td align='right'>85</td>
+  <td><code>flew</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>flew</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>flew</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>fly</code></td>
+</tr>
+<tr>
+  <td align='right'>86</td>
+  <td><code>flown</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>flown</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>flown</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>fly</code></td>
+</tr>
+<tr>
+  <td align='right'>87</td>
+  <td><code>flung</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>flung</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>flung</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>fling</code></td>
+</tr>
+<tr>
+  <td align='right'>88</td>
+  <td><code>forbade</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>forbad</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>forbad</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>forbid</code></td>
+</tr>
+<tr>
+  <td align='right'>89</td>
+  <td><code>forbidden</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>forbidden</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>forbidden</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>forbid</code></td>
+</tr>
+<tr>
+  <td align='right'>90</td>
+  <td><code>forbore</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>forbor</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>forbor</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>forbear</code></td>
+</tr>
+<tr>
+  <td align='right'>91</td>
+  <td><code>foregone</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>foregon</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>foregon</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>forego</code></td>
+</tr>
+<tr>
+  <td align='right'>92</td>
+  <td><code>foresaw</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>foresaw</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>foresaw</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>foresee</code></td>
+</tr>
+<tr>
+  <td align='right'>93</td>
+  <td><code>foreseen</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>foreseen</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>foreseen</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>foresee</code></td>
+</tr>
+<tr>
+  <td align='right'>94</td>
+  <td><code>foretold</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>foretold</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>foretold</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>foretell</code></td>
+</tr>
+<tr>
+  <td align='right'>95</td>
+  <td><code>forgave</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>forgav</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>forgav</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>forgive</code></td>
+</tr>
+<tr>
+  <td align='right'>96</td>
+  <td><code>forgiven</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>forgiven</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>forgiven</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>forgive</code></td>
+</tr>
+<tr>
+  <td align='right'>97</td>
+  <td><code>forgot</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>forgot</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>forgot</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>forget</code></td>
+</tr>
+<tr>
+  <td align='right'>98</td>
+  <td><code>forgotten</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>forgotten</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>forgotten</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>forget</code></td>
+</tr>
+<tr>
+  <td align='right'>99</td>
+  <td><code>forsaken</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>forsaken</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>forsaken</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>forsake</code></td>
+</tr>
+<tr>
+  <td align='right'>100</td>
+  <td><code>forsook</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>forsook</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>forsook</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>forsake</code></td>
+</tr>
+<tr>
+  <td align='right'>101</td>
+  <td><code>forsworn</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>forsworn</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>forsworn</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>forswear</code></td>
+</tr>
+<tr>
+  <td align='right'>102</td>
+  <td><code>fought</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>fought</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>fought</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>fight</code></td>
+</tr>
+<tr>
+  <td align='right'>103</td>
+  <td><code>found</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>found</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>found</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>find</code></td>
+</tr>
+<tr>
+  <td align='right'>104</td>
+  <td><code>froze</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>froze</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>froze</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>freeze</code></td>
+</tr>
+<tr>
+  <td align='right'>105</td>
+  <td><code>frozen</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>frozen</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>frozen</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>freeze</code></td>
+</tr>
+<tr>
+  <td align='right'>106</td>
+  <td><code>gainsaid</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>gainsaid</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>gainsaid</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>gainsay</code></td>
+</tr>
+<tr>
+  <td align='right'>107</td>
+  <td><code>gave</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>gave</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>gave</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>give</code></td>
+</tr>
+<tr>
+  <td align='right'>108</td>
+  <td><code>gilded</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>gild</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>gild</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>gild</code></td>
+</tr>
+<tr>
+  <td align='right'>109</td>
+  <td><code>gilt</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>gilt</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>gilt</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>gild</code></td>
+</tr>
+<tr>
+  <td align='right'>110</td>
+  <td><code>given</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>given</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>given</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>give</code></td>
+</tr>
+<tr>
+  <td align='right'>111</td>
+  <td><code>gone</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>gone</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>gone</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>go</code></td>
+</tr>
+<tr>
+  <td align='right'>112</td>
+  <td><code>got</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>got</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>got</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>get</code></td>
+</tr>
+<tr>
+  <td align='right'>113</td>
+  <td><code>gotten</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>gotten</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>gotten</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>get</code></td>
+</tr>
+<tr>
+  <td align='right'>114</td>
+  <td><code>grew</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>grew</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>grew</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>grow</code></td>
+</tr>
+<tr>
+  <td align='right'>115</td>
+  <td><code>ground</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>ground</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>ground</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>grind</code></td>
+</tr>
+<tr>
+  <td align='right'>116</td>
+  <td><code>grown</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>grown</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>grown</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>grow</code></td>
+</tr>
+<tr>
+  <td align='right'>117</td>
+  <td><code>had</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>had</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>had</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>have</code></td>
+</tr>
+<tr>
+  <td align='right'>118</td>
+  <td><code>hanged</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>hang</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>hang</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>hang</code></td>
+</tr>
+<tr>
+  <td align='right'>119</td>
+  <td><code>has</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>ha</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>has</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>have</code></td>
+</tr>
+<tr>
+  <td align='right'>120</td>
+  <td><code>he</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>he</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>he</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>i</code></td>
+</tr>
+<tr>
+  <td align='right'>121</td>
+  <td><code>heard</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>heard</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>heard</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>hear</code></td>
+</tr>
+<tr>
+  <td align='right'>122</td>
+  <td><code>heaved</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>heav</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>heav</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>heave</code></td>
+</tr>
+<tr>
+  <td align='right'>123</td>
+  <td><code>held</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>held</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>held</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>hold</code></td>
+</tr>
+<tr>
+  <td align='right'>124</td>
+  <td><code>her</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>her</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>her</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>i</code></td>
+</tr>
+<tr>
+  <td align='right'>125</td>
+  <td><code>hid</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>hid</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>hid</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>hide</code></td>
+</tr>
+<tr>
+  <td align='right'>126</td>
+  <td><code>hidden</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>hidden</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>hidden</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>hide</code></td>
+</tr>
+<tr>
+  <td align='right'>127</td>
+  <td><code>him</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>him</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>him</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>i</code></td>
+</tr>
+<tr>
+  <td align='right'>128</td>
+  <td><code>hove</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>hove</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>hove</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>heave</code></td>
+</tr>
+<tr>
+  <td align='right'>129</td>
+  <td><code>hung</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>hung</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>hung</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>hang</code></td>
+</tr>
+<tr>
+  <td align='right'>130</td>
+  <td><code>ii</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>ii</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>ii</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>ii</code></td>
+</tr>
+<tr>
+  <td align='right'>131</td>
+  <td><code>iii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>iii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>iii</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>iii</code></td>
+</tr>
+<tr>
+  <td align='right'>132</td>
+  <td><code>inbred</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>inbr</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>inbr</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>inbreed</code></td>
+</tr>
+<tr>
+  <td align='right'>133</td>
+  <td><code>inlaid</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>inlaid</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>inlaid</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>inlay</code></td>
+</tr>
+<tr>
+  <td align='right'>134</td>
+  <td><code>is</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>is</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>is</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>be</code></td>
+</tr>
+<tr>
+  <td align='right'>135</td>
+  <td><code>it</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>it</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>it</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>i</code></td>
+</tr>
+<tr>
+  <td align='right'>136</td>
+  <td><code>iv</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>iv</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>iv</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>iv</code></td>
+</tr>
+<tr>
+  <td align='right'>137</td>
+  <td><code>kept</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>kept</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>kept</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>keep</code></td>
+</tr>
+<tr>
+  <td align='right'>138</td>
+  <td><code>kneeled</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>kneel</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>kneel</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>kneel</code></td>
+</tr>
+<tr>
+  <td align='right'>139</td>
+  <td><code>knelt</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>knelt</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>knelt</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>kneel</code></td>
+</tr>
+<tr>
+  <td align='right'>140</td>
+  <td><code>knew</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>knew</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>knew</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>know</code></td>
+</tr>
+<tr>
+  <td align='right'>141</td>
+  <td><code>knitted</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>knit</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>knit</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>knit</code></td>
+</tr>
+<tr>
+  <td align='right'>142</td>
+  <td><code>known</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>known</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>known</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>know</code></td>
+</tr>
+<tr>
+  <td align='right'>143</td>
+  <td><code>laden</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>laden</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>laden</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>lade</code></td>
+</tr>
+<tr>
+  <td align='right'>144</td>
+  <td><code>laid</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>laid</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>laid</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>lay</code></td>
+</tr>
+<tr>
+  <td align='right'>145</td>
+  <td><code>lain</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>lain</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>lain</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>lie</code></td>
+</tr>
+<tr>
+  <td align='right'>146</td>
+  <td><code>lay</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>lai</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>lay</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>lie</code></td>
+</tr>
+<tr>
+  <td align='right'>147</td>
+  <td><code>leaned</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>lean</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>lean</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>lean</code></td>
+</tr>
+<tr>
+  <td align='right'>148</td>
+  <td><code>leant</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>leant</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>leant</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>lean</code></td>
+</tr>
+<tr>
+  <td align='right'>149</td>
+  <td><code>leaped</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>leap</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>leap</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>leap</code></td>
+</tr>
+<tr>
+  <td align='right'>150</td>
+  <td><code>leapt</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>leapt</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>leapt</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>leap</code></td>
+</tr>
+<tr>
+  <td align='right'>151</td>
+  <td><code>learned</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>learn</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>learn</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>learn</code></td>
+</tr>
+<tr>
+  <td align='right'>152</td>
+  <td><code>learnt</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>learnt</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>learnt</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>learn</code></td>
+</tr>
+<tr>
+  <td align='right'>153</td>
+  <td><code>led</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>led</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>led</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>lead</code></td>
+</tr>
+<tr>
+  <td align='right'>154</td>
+  <td><code>left</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>left</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>left</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>leave</code></td>
+</tr>
+<tr>
+  <td align='right'>155</td>
+  <td><code>lent</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>lent</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>lent</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>lend</code></td>
+</tr>
+<tr>
+  <td align='right'>156</td>
+  <td><code>let</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>let</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>let</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>let</code></td>
+</tr>
+<tr>
+  <td align='right'>157</td>
+  <td><code>lighted</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>light</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>light</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>light</code></td>
+</tr>
+<tr>
+  <td align='right'>158</td>
+  <td><code>lii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>lii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>lii</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>lii</code></td>
+</tr>
+<tr>
+  <td align='right'>159</td>
+  <td><code>liii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>liii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>liii</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>liii</code></td>
+</tr>
+<tr>
+  <td align='right'>160</td>
+  <td><code>lit</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>lit</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>lit</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>light</code></td>
+</tr>
+<tr>
+  <td align='right'>161</td>
+  <td><code>liv</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>liv</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>liv</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>liv</code></td>
+</tr>
+<tr>
+  <td align='right'>162</td>
+  <td><code>lix</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>lix</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>lix</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>lix</code></td>
+</tr>
+<tr>
+  <td align='right'>163</td>
+  <td><code>lost</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>lost</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>lost</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>lose</code></td>
+</tr>
+<tr>
+  <td align='right'>164</td>
+  <td><code>lv</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>lv</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>lv</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>lv</code></td>
+</tr>
+<tr>
+  <td align='right'>165</td>
+  <td><code>lvi</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>lvi</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>lvi</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>lvi</code></td>
+</tr>
+<tr>
+  <td align='right'>166</td>
+  <td><code>lvii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>lvii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>lvii</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>lvii</code></td>
+</tr>
+<tr>
+  <td align='right'>167</td>
+  <td><code>lviii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>lviii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>lviii</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>lviii</code></td>
+</tr>
+<tr>
+  <td align='right'>168</td>
+  <td><code>lxi</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>lxi</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>lxi</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>lxi</code></td>
+</tr>
+<tr>
+  <td align='right'>169</td>
+  <td><code>lxii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>lxii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>lxii</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>lxii</code></td>
+</tr>
+<tr>
+  <td align='right'>170</td>
+  <td><code>lxiii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>lxiii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>lxiii</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>lxiii</code></td>
+</tr>
+<tr>
+  <td align='right'>171</td>
+  <td><code>lxiv</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>lxiv</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>lxiv</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>lxiv</code></td>
+</tr>
+<tr>
+  <td align='right'>172</td>
+  <td><code>lxv</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>lxv</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>lxv</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>lxv</code></td>
+</tr>
+<tr>
+  <td align='right'>173</td>
+  <td><code>lxvi</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>lxvi</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>lxvi</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>lxvi</code></td>
+</tr>
+<tr>
+  <td align='right'>174</td>
+  <td><code>lxvii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>lxvii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>lxvii</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>lxvii</code></td>
+</tr>
+<tr>
+  <td align='right'>175</td>
+  <td><code>made</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>made</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>made</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>make</code></td>
+</tr>
+<tr>
+  <td align='right'>176</td>
+  <td><code>meant</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>meant</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>meant</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>mean</code></td>
+</tr>
+<tr>
+  <td align='right'>177</td>
+  <td><code>met</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>met</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>met</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>meet</code></td>
+</tr>
+<tr>
+  <td align='right'>178</td>
+  <td><code>mislaid</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>mislaid</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>mislaid</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>mislay</code></td>
+</tr>
+<tr>
+  <td align='right'>179</td>
+  <td><code>misled</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>misl</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>misl</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>mislead</code></td>
+</tr>
+<tr>
+  <td align='right'>180</td>
+  <td><code>misspent</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>misspent</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>misspent</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>misspend</code></td>
+</tr>
+<tr>
+  <td align='right'>181</td>
+  <td><code>mistaken</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>mistaken</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>mistaken</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>mistake</code></td>
+</tr>
+<tr>
+  <td align='right'>182</td>
+  <td><code>mistook</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>mistook</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>mistook</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>mistake</code></td>
+</tr>
+<tr>
+  <td align='right'>183</td>
+  <td><code>misunderstood</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>misunderstood</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>misunderstood</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>misunderstand</code></td>
+</tr>
+<tr>
+  <td align='right'>184</td>
+  <td><code>mmd</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>mmd</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>mmd</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>mmd</code></td>
+</tr>
+<tr>
+  <td align='right'>185</td>
+  <td><code>mowed</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>mow</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>mow</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>mow</code></td>
+</tr>
+<tr>
+  <td align='right'>186</td>
+  <td><code>mown</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>mown</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>mown</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>mow</code></td>
+</tr>
+<tr>
+  <td align='right'>187</td>
+  <td><code>mr</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>mr</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>mr</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>mister</code></td>
+</tr>
+<tr>
+  <td align='right'>188</td>
+  <td><code>mrs</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>mr</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>mrs</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>missis</code></td>
+</tr>
+<tr>
+  <td align='right'>189</td>
+  <td><code>ms</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>ms</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>ms</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>miss</code></td>
+</tr>
+<tr>
+  <td align='right'>190</td>
+  <td><code>outdone</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>outdon</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>outdon</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>outdo</code></td>
+</tr>
+<tr>
+  <td align='right'>191</td>
+  <td><code>outgrown</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>outgrown</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>outgrown</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>outgrow</code></td>
+</tr>
+<tr>
+  <td align='right'>192</td>
+  <td><code>outrun</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>outrun</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>outrun</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>outrun</code></td>
+</tr>
+<tr>
+  <td align='right'>193</td>
+  <td><code>outshone</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>outshon</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>outshon</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>outshine</code></td>
+</tr>
+<tr>
+  <td align='right'>194</td>
+  <td><code>outspoken</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>outspoken</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>outspoken</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>outspeak</code></td>
+</tr>
+<tr>
+  <td align='right'>195</td>
+  <td><code>overborne</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>overborn</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>overborn</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>overbear</code></td>
+</tr>
+<tr>
+  <td align='right'>196</td>
+  <td><code>overcame</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>overcam</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>overcam</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>overcome</code></td>
+</tr>
+<tr>
+  <td align='right'>197</td>
+  <td><code>overdid</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>overdid</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>overdid</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>overdo</code></td>
+</tr>
+<tr>
+  <td align='right'>198</td>
+  <td><code>overdone</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>overdon</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>overdon</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>overdo</code></td>
+</tr>
+<tr>
+  <td align='right'>199</td>
+  <td><code>overheard</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>overheard</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>overheard</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>overhear</code></td>
+</tr>
+<tr>
+  <td align='right'>200</td>
+  <td><code>overhung</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>overhung</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>overhung</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>overhang</code></td>
+</tr>
+<tr>
+  <td align='right'>201</td>
+  <td><code>overlaid</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>overlaid</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>overlaid</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>overlay</code></td>
+</tr>
+<tr>
+  <td align='right'>202</td>
+  <td><code>overslept</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>overslept</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>overslept</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>oversleep</code></td>
+</tr>
+<tr>
+  <td align='right'>203</td>
+  <td><code>overtaken</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>overtaken</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>overtaken</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>overtake</code></td>
+</tr>
+<tr>
+  <td align='right'>204</td>
+  <td><code>overthrew</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>overthrew</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>overthrew</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>overthrow</code></td>
+</tr>
+<tr>
+  <td align='right'>205</td>
+  <td><code>overthrown</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>overthrown</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>overthrown</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>overthrow</code></td>
+</tr>
+<tr>
+  <td align='right'>206</td>
+  <td><code>overtook</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>overtook</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>overtook</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>overtake</code></td>
+</tr>
+<tr>
+  <td align='right'>207</td>
+  <td><code>paid</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>paid</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>paid</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>pay</code></td>
+</tr>
+<tr>
+  <td align='right'>208</td>
+  <td><code>partaken</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>partaken</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>partaken</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>partake</code></td>
+</tr>
+<tr>
+  <td align='right'>209</td>
+  <td><code>partook</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>partook</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>partook</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>partake</code></td>
+</tr>
+<tr>
+  <td align='right'>210</td>
+  <td><code>pleaded</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>plead</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>plead</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>plead</code></td>
+</tr>
+<tr>
+  <td align='right'>211</td>
+  <td><code>proved</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>prove</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>prove</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>prove</code></td>
+</tr>
+<tr>
+  <td align='right'>212</td>
+  <td><code>quitted</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>quit</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>quit</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>quit</code></td>
+</tr>
+<tr>
+  <td align='right'>213</td>
+  <td><code>ran</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>ran</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>ran</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>run</code></td>
+</tr>
+<tr>
+  <td align='right'>214</td>
+  <td><code>rang</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>rang</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>rang</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>ring</code></td>
+</tr>
+<tr>
+  <td align='right'>215</td>
+  <td><code>rebound</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>rebound</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>rebound</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>rebind</code></td>
+</tr>
+<tr>
+  <td align='right'>216</td>
+  <td><code>rebuilt</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>rebuilt</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>rebuilt</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>rebuild</code></td>
+</tr>
+<tr>
+  <td align='right'>217</td>
+  <td><code>rent</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>rent</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>rent</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>rend</code></td>
+</tr>
+<tr>
+  <td align='right'>218</td>
+  <td><code>repaid</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>repaid</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>repaid</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>repay</code></td>
+</tr>
+<tr>
+  <td align='right'>219</td>
+  <td><code>resent</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>resent</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>resent</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>resend</code></td>
+</tr>
+<tr>
+  <td align='right'>220</td>
+  <td><code>ridden</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>ridden</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>ridden</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>ride</code></td>
+</tr>
+<tr>
+  <td align='right'>221</td>
+  <td><code>risen</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>risen</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>risen</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>rise</code></td>
+</tr>
+<tr>
+  <td align='right'>222</td>
+  <td><code>rode</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>rode</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>rode</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>ride</code></td>
+</tr>
+<tr>
+  <td align='right'>223</td>
+  <td><code>rose</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>rose</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>rose</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>rise</code></td>
+</tr>
+<tr>
+  <td align='right'>224</td>
+  <td><code>run</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>run</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>run</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>run</code></td>
+</tr>
+<tr>
+  <td align='right'>225</td>
+  <td><code>rung</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>rung</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>rung</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>ring</code></td>
+</tr>
+<tr>
+  <td align='right'>226</td>
+  <td><code>said</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>said</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>said</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>say</code></td>
+</tr>
+<tr>
+  <td align='right'>227</td>
+  <td><code>sang</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>sang</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>sang</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>sing</code></td>
+</tr>
+<tr>
+  <td align='right'>228</td>
+  <td><code>sank</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>sank</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>sank</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>sink</code></td>
+</tr>
+<tr>
+  <td align='right'>229</td>
+  <td><code>sat</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>sat</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>sat</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>sit</code></td>
+</tr>
+<tr>
+  <td align='right'>230</td>
+  <td><code>saw</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>saw</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>saw</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>see</code></td>
+</tr>
+<tr>
+  <td align='right'>231</td>
+  <td><code>seen</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>seen</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>seen</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>see</code></td>
+</tr>
+<tr>
+  <td align='right'>232</td>
+  <td><code>sent</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>sent</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>sent</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>send</code></td>
+</tr>
+<tr>
+  <td align='right'>233</td>
+  <td><code>sewed</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>sew</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>sew</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>sew</code></td>
+</tr>
+<tr>
+  <td align='right'>234</td>
+  <td><code>shaken</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>shaken</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>shaken</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>shake</code></td>
+</tr>
+<tr>
+  <td align='right'>235</td>
+  <td><code>shaved</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>shave</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>shave</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>shave</code></td>
+</tr>
+<tr>
+  <td align='right'>236</td>
+  <td><code>shaven</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>shaven</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>shaven</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>shave</code></td>
+</tr>
+<tr>
+  <td align='right'>237</td>
+  <td><code>she</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>she</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>she</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>i</code></td>
+</tr>
+<tr>
+  <td align='right'>238</td>
+  <td><code>shod</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>shod</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>shod</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>shoe</code></td>
+</tr>
+<tr>
+  <td align='right'>239</td>
+  <td><code>shoed</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>sho</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>sho</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>shoe</code></td>
+</tr>
+<tr>
+  <td align='right'>240</td>
+  <td><code>shone</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>shone</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>shone</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>shine</code></td>
+</tr>
+<tr>
+  <td align='right'>241</td>
+  <td><code>shook</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>shook</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>shook</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>shake</code></td>
+</tr>
+<tr>
+  <td align='right'>242</td>
+  <td><code>shorn</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>shorn</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>shorn</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>shear</code></td>
+</tr>
+<tr>
+  <td align='right'>243</td>
+  <td><code>shot</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>shot</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>shot</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>shoot</code></td>
+</tr>
+<tr>
+  <td align='right'>244</td>
+  <td><code>showed</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>show</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>show</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>show</code></td>
+</tr>
+<tr>
+  <td align='right'>245</td>
+  <td><code>shrank</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>shrank</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>shrank</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>shrink</code></td>
+</tr>
+<tr>
+  <td align='right'>246</td>
+  <td><code>shrunk</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>shrunk</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>shrunk</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>shrink</code></td>
+</tr>
+<tr>
+  <td align='right'>247</td>
+  <td><code>slain</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>slain</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>slain</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>slay</code></td>
+</tr>
+<tr>
+  <td align='right'>248</td>
+  <td><code>slept</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>slept</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>slept</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>sleep</code></td>
+</tr>
+<tr>
+  <td align='right'>249</td>
+  <td><code>slid</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>slid</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>slid</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>slide</code></td>
+</tr>
+<tr>
+  <td align='right'>250</td>
+  <td><code>slung</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>slung</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>slung</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>sling</code></td>
+</tr>
+<tr>
+  <td align='right'>251</td>
+  <td><code>slunk</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>slunk</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>slunk</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>slink</code></td>
+</tr>
+<tr>
+  <td align='right'>252</td>
+  <td><code>smelt</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>smelt</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>smelt</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>smell</code></td>
+</tr>
+<tr>
+  <td align='right'>253</td>
+  <td><code>smitten</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>smitten</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>smitten</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>smite</code></td>
+</tr>
+<tr>
+  <td align='right'>254</td>
+  <td><code>smote</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>smote</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>smote</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>smite</code></td>
+</tr>
+<tr>
+  <td align='right'>255</td>
+  <td><code>sneaked</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>sneak</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>sneak</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>sneak</code></td>
+</tr>
+<tr>
+  <td align='right'>256</td>
+  <td><code>sold</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>sold</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>sold</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>sell</code></td>
+</tr>
+<tr>
+  <td align='right'>257</td>
+  <td><code>sought</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>sought</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>sought</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>seek</code></td>
+</tr>
+<tr>
+  <td align='right'>258</td>
+  <td><code>sowed</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>sow</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>sow</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>sow</code></td>
+</tr>
+<tr>
+  <td align='right'>259</td>
+  <td><code>sown</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>sown</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>sown</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>sow</code></td>
+</tr>
+<tr>
+  <td align='right'>260</td>
+  <td><code>spat</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>spat</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>spat</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>spit</code></td>
+</tr>
+<tr>
+  <td align='right'>261</td>
+  <td><code>sped</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>sped</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>sped</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>speed</code></td>
+</tr>
+<tr>
+  <td align='right'>262</td>
+  <td><code>spelt</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>spelt</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>spelt</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>spell</code></td>
+</tr>
+<tr>
+  <td align='right'>263</td>
+  <td><code>spent</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>spent</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>spent</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>spend</code></td>
+</tr>
+<tr>
+  <td align='right'>264</td>
+  <td><code>spilled</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>spill</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>spill</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>spill</code></td>
+</tr>
+<tr>
+  <td align='right'>265</td>
+  <td><code>spilt</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>spilt</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>spilt</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>spill</code></td>
+</tr>
+<tr>
+  <td align='right'>266</td>
+  <td><code>spoiled</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>spoil</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>spoil</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>spoil</code></td>
+</tr>
+<tr>
+  <td align='right'>267</td>
+  <td><code>spoilt</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>spoilt</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>spoilt</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>spoil</code></td>
+</tr>
+<tr>
+  <td align='right'>268</td>
+  <td><code>spoke</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>spoke</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>spoke</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>speak</code></td>
+</tr>
+<tr>
+  <td align='right'>269</td>
+  <td><code>spoken</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>spoken</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>spoken</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>speak</code></td>
+</tr>
+<tr>
+  <td align='right'>270</td>
+  <td><code>sprang</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>sprang</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>sprang</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>spring</code></td>
+</tr>
+<tr>
+  <td align='right'>271</td>
+  <td><code>sprung</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>sprung</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>sprung</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>spring</code></td>
+</tr>
+<tr>
+  <td align='right'>272</td>
+  <td><code>spun</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>spun</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>spun</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>spin</code></td>
+</tr>
+<tr>
+  <td align='right'>273</td>
+  <td><code>staved</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>stave</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>stave</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>stave</code></td>
+</tr>
+<tr>
+  <td align='right'>274</td>
+  <td><code>stole</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>stole</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>stole</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>steal</code></td>
+</tr>
+<tr>
+  <td align='right'>275</td>
+  <td><code>stolen</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>stolen</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>stolen</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>steal</code></td>
+</tr>
+<tr>
+  <td align='right'>276</td>
+  <td><code>stood</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>stood</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>stood</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>stand</code></td>
+</tr>
+<tr>
+  <td align='right'>277</td>
+  <td><code>stove</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>stove</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>stove</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>stave</code></td>
+</tr>
+<tr>
+  <td align='right'>278</td>
+  <td><code>strewed</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>strew</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>strew</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>strew</code></td>
+</tr>
+<tr>
+  <td align='right'>279</td>
+  <td><code>strewn</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>strewn</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>strewn</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>strew</code></td>
+</tr>
+<tr>
+  <td align='right'>280</td>
+  <td><code>stricken</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>stricken</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>stricken</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>strike</code></td>
+</tr>
+<tr>
+  <td align='right'>281</td>
+  <td><code>stripped</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>strip</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>strip</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>strip</code></td>
+</tr>
+<tr>
+  <td align='right'>282</td>
+  <td><code>striven</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>striven</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>striven</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>strive</code></td>
+</tr>
+<tr>
+  <td align='right'>283</td>
+  <td><code>strode</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>strode</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>strode</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>stride</code></td>
+</tr>
+<tr>
+  <td align='right'>284</td>
+  <td><code>strove</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>strove</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>strove</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>strive</code></td>
+</tr>
+<tr>
+  <td align='right'>285</td>
+  <td><code>struck</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>struck</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>struck</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>strike</code></td>
+</tr>
+<tr>
+  <td align='right'>286</td>
+  <td><code>strung</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>strung</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>strung</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>string</code></td>
+</tr>
+<tr>
+  <td align='right'>287</td>
+  <td><code>stuck</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>stuck</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>stuck</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>stick</code></td>
+</tr>
+<tr>
+  <td align='right'>288</td>
+  <td><code>stung</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>stung</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>stung</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>sting</code></td>
+</tr>
+<tr>
+  <td align='right'>289</td>
+  <td><code>sunburnt</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>sunburnt</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>sunburnt</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>sunburn</code></td>
+</tr>
+<tr>
+  <td align='right'>290</td>
+  <td><code>sung</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>sung</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>sung</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>sing</code></td>
+</tr>
+<tr>
+  <td align='right'>291</td>
+  <td><code>sunk</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>sunk</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>sunk</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>sink</code></td>
+</tr>
+<tr>
+  <td align='right'>292</td>
+  <td><code>swam</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>swam</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>swam</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>swim</code></td>
+</tr>
+<tr>
+  <td align='right'>293</td>
+  <td><code>swelled</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>swell</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>swell</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>swell</code></td>
+</tr>
+<tr>
+  <td align='right'>294</td>
+  <td><code>swept</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>swept</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>swept</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>sweep</code></td>
+</tr>
+<tr>
+  <td align='right'>295</td>
+  <td><code>swollen</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>swollen</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>swollen</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>swell</code></td>
+</tr>
+<tr>
+  <td align='right'>296</td>
+  <td><code>swore</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>swore</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>swore</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>swear</code></td>
+</tr>
+<tr>
+  <td align='right'>297</td>
+  <td><code>sworn</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>sworn</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>sworn</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>swear</code></td>
+</tr>
+<tr>
+  <td align='right'>298</td>
+  <td><code>swung</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>swung</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>swung</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>swing</code></td>
+</tr>
+<tr>
+  <td align='right'>299</td>
+  <td><code>taken</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>taken</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>taken</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>take</code></td>
+</tr>
+<tr>
+  <td align='right'>300</td>
+  <td><code>taught</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>taught</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>taught</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>teach</code></td>
+</tr>
+<tr>
+  <td align='right'>301</td>
+  <td><code>they</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>thei</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>they</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>i</code></td>
+</tr>
+<tr>
+  <td align='right'>302</td>
+  <td><code>thought</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>thought</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>thought</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>think</code></td>
+</tr>
+<tr>
+  <td align='right'>303</td>
+  <td><code>threw</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>threw</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>threw</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>throw</code></td>
+</tr>
+<tr>
+  <td align='right'>304</td>
+  <td><code>thriven</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>thriven</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>thriven</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>thrive</code></td>
+</tr>
+<tr>
+  <td align='right'>305</td>
+  <td><code>throve</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>throve</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>throve</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>thrive</code></td>
+</tr>
+<tr>
+  <td align='right'>306</td>
+  <td><code>thrown</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>thrown</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>thrown</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>throw</code></td>
+</tr>
+<tr>
+  <td align='right'>307</td>
+  <td><code>told</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>told</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>told</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>tell</code></td>
+</tr>
+<tr>
+  <td align='right'>308</td>
+  <td><code>took</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>took</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>took</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>take</code></td>
+</tr>
+<tr>
+  <td align='right'>309</td>
+  <td><code>tore</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>tore</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>tore</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>tear</code></td>
+</tr>
+<tr>
+  <td align='right'>310</td>
+  <td><code>torn</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>torn</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>torn</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>tear</code></td>
+</tr>
+<tr>
+  <td align='right'>311</td>
+  <td><code>trod</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>trod</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>trod</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>tread</code></td>
+</tr>
+<tr>
+  <td align='right'>312</td>
+  <td><code>trodden</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>trodden</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>trodden</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>tread</code></td>
+</tr>
+<tr>
+  <td align='right'>313</td>
+  <td><code>unbent</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>unbent</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>unbent</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>unbend</code></td>
+</tr>
+<tr>
+  <td align='right'>314</td>
+  <td><code>unborn</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>unborn</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>unborn</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>unbear</code></td>
+</tr>
+<tr>
+  <td align='right'>315</td>
+  <td><code>unbound</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>unbound</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>unbound</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>unbind</code></td>
+</tr>
+<tr>
+  <td align='right'>316</td>
+  <td><code>undergone</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>undergon</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>undergon</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>undergo</code></td>
+</tr>
+<tr>
+  <td align='right'>317</td>
+  <td><code>understood</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>understood</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>understood</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>understand</code></td>
+</tr>
+<tr>
+  <td align='right'>318</td>
+  <td><code>undertaken</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>undertaken</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>undertaken</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>undertake</code></td>
+</tr>
+<tr>
+  <td align='right'>319</td>
+  <td><code>undertook</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>undertook</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>undertook</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>undertake</code></td>
+</tr>
+<tr>
+  <td align='right'>320</td>
+  <td><code>underwent</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>underw</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>underw</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>undergo</code></td>
+</tr>
+<tr>
+  <td align='right'>321</td>
+  <td><code>undid</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>undid</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>undid</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>undo</code></td>
+</tr>
+<tr>
+  <td align='right'>322</td>
+  <td><code>undone</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>undon</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>undon</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>undo</code></td>
+</tr>
+<tr>
+  <td align='right'>323</td>
+  <td><code>unlearnt</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>unlearnt</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>unlearnt</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>unlearn</code></td>
+</tr>
+<tr>
+  <td align='right'>324</td>
+  <td><code>unmade</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>unmad</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>unmad</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>unmake</code></td>
+</tr>
+<tr>
+  <td align='right'>325</td>
+  <td><code>unstrung</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>unstrung</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>unstrung</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>unstring</code></td>
+</tr>
+<tr>
+  <td align='right'>326</td>
+  <td><code>unthought</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>unthought</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>unthought</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>unthink</code></td>
+</tr>
+<tr>
+  <td align='right'>327</td>
+  <td><code>unwound</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>unwound</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>unwound</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>unwind</code></td>
+</tr>
+<tr>
+  <td align='right'>328</td>
+  <td><code>unwritten</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>unwritten</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>unwritten</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>unwrite</code></td>
+</tr>
+<tr>
+  <td align='right'>329</td>
+  <td><code>upheld</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>upheld</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>upheld</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>uphold</code></td>
+</tr>
+<tr>
+  <td align='right'>330</td>
+  <td><code>vexed</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>vex</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>vex</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>vex</code></td>
+</tr>
+<tr>
+  <td align='right'>331</td>
+  <td><code>vi</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>vi</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>vi</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>vi</code></td>
+</tr>
+<tr>
+  <td align='right'>332</td>
+  <td><code>vii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>vii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>vii</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>vii</code></td>
+</tr>
+<tr>
+  <td align='right'>333</td>
+  <td><code>viii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>viii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>viii</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>viii</code></td>
+</tr>
+<tr>
+  <td align='right'>334</td>
+  <td><code>waked</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>wake</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>wake</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>wake</code></td>
+</tr>
+<tr>
+  <td align='right'>335</td>
+  <td><code>was</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>wa</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>was</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>be</code></td>
+</tr>
+<tr>
+  <td align='right'>336</td>
+  <td><code>waylaid</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>waylaid</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>waylaid</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>waylay</code></td>
+</tr>
+<tr>
+  <td align='right'>337</td>
+  <td><code>we</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>we</code></td>
+  <td class='undersize'>undersize</td>
+  <td><code>we</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>i</code></td>
+</tr>
+<tr>
+  <td align='right'>338</td>
+  <td><code>wedded</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>wed</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>wed</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>wed</code></td>
+</tr>
+<tr>
+  <td align='right'>339</td>
+  <td><code>went</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>went</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>went</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>go</code></td>
+</tr>
+<tr>
+  <td align='right'>340</td>
+  <td><code>wept</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>wept</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>wept</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>weep</code></td>
+</tr>
+<tr>
+  <td align='right'>341</td>
+  <td><code>were</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>were</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>were</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>be</code></td>
+</tr>
+<tr>
+  <td align='right'>342</td>
+  <td><code>wetted</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>wet</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>wet</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>wet</code></td>
+</tr>
+<tr>
+  <td align='right'>343</td>
+  <td><code>withdrawn</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>withdrawn</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>withdrawn</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>withdraw</code></td>
+</tr>
+<tr>
+  <td align='right'>344</td>
+  <td><code>withdrew</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>withdrew</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>withdrew</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>withdraw</code></td>
+</tr>
+<tr>
+  <td align='right'>345</td>
+  <td><code>withheld</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>withheld</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>withheld</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>withhold</code></td>
+</tr>
+<tr>
+  <td align='right'>346</td>
+  <td><code>withstood</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>withstood</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>withstood</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>withstand</code></td>
+</tr>
+<tr>
+  <td align='right'>347</td>
+  <td><code>woke</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>woke</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>woke</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>wake</code></td>
+</tr>
+<tr>
+  <td align='right'>348</td>
+  <td><code>won</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>won</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>won</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>win</code></td>
+</tr>
+<tr>
+  <td align='right'>349</td>
+  <td><code>wore</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>wore</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>wore</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>wear</code></td>
+</tr>
+<tr>
+  <td align='right'>350</td>
+  <td><code>worn</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>worn</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>worn</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>wear</code></td>
+</tr>
+<tr>
+  <td align='right'>351</td>
+  <td><code>wound</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>wound</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>wound</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>wind</code></td>
+</tr>
+<tr>
+  <td align='right'>352</td>
+  <td><code>woven</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>woven</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>woven</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>weave</code></td>
+</tr>
+<tr>
+  <td align='right'>353</td>
+  <td><code>written</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>written</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>written</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>write</code></td>
+</tr>
+<tr>
+  <td align='right'>354</td>
+  <td><code>wrote</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>wrote</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>wrote</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>write</code></td>
+</tr>
+<tr>
+  <td align='right'>355</td>
+  <td><code>wrung</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>wrung</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>wrung</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>wring</code></td>
+</tr>
+<tr>
+  <td align='right'>356</td>
+  <td><code>xiv</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xiv</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xiv</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>xiv</code></td>
+</tr>
+<tr>
+  <td align='right'>357</td>
+  <td><code>xix</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xix</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xix</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>xix</code></td>
+</tr>
+<tr>
+  <td align='right'>358</td>
+  <td><code>xli</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xli</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xli</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>xli</code></td>
+</tr>
+<tr>
+  <td align='right'>359</td>
+  <td><code>xlii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xlii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xlii</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>xlii</code></td>
+</tr>
+<tr>
+  <td align='right'>360</td>
+  <td><code>xliii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xliii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xliii</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>xliii</code></td>
+</tr>
+<tr>
+  <td align='right'>361</td>
+  <td><code>xliv</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xliv</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xliv</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>xliv</code></td>
+</tr>
+<tr>
+  <td align='right'>362</td>
+  <td><code>xlix</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xlix</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xlix</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>xlix</code></td>
+</tr>
+<tr>
+  <td align='right'>363</td>
+  <td><code>xlv</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xlv</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xlv</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>xlv</code></td>
+</tr>
+<tr>
+  <td align='right'>364</td>
+  <td><code>xlvi</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xlvi</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xlvi</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>xlvi</code></td>
+</tr>
+<tr>
+  <td align='right'>365</td>
+  <td><code>xlvii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xlvii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xlvii</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>xlvii</code></td>
+</tr>
+<tr>
+  <td align='right'>366</td>
+  <td><code>xlviii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xlviii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xlviii</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>xlviii</code></td>
+</tr>
+<tr>
+  <td align='right'>367</td>
+  <td><code>xxxi</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xxxi</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xxxi</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>xxxi</code></td>
+</tr>
+<tr>
+  <td align='right'>368</td>
+  <td><code>xxxii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xxxii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xxxii</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>xxxii</code></td>
+</tr>
+<tr>
+  <td align='right'>369</td>
+  <td><code>xxxiii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xxxiii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xxxiii</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>xxxiii</code></td>
+</tr>
+<tr>
+  <td align='right'>370</td>
+  <td><code>xxxiv</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xxxiv</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xxxiv</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>xxxiv</code></td>
+</tr>
+<tr>
+  <td align='right'>371</td>
+  <td><code>xxxix</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xxxix</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xxxix</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>xxxix</code></td>
+</tr>
+<tr>
+  <td align='right'>372</td>
+  <td><code>xxxv</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xxxv</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xxxv</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>xxxv</code></td>
+</tr>
+<tr>
+  <td align='right'>373</td>
+  <td><code>xxxvi</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xxxvi</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xxxvi</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>xxxvi</code></td>
+</tr>
+<tr>
+  <td align='right'>374</td>
+  <td><code>xxxvii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xxxvii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xxxvii</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>xxxvii</code></td>
+</tr>
+<tr>
+  <td align='right'>375</td>
+  <td><code>xxxviii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xxxviii</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>xxxviii</code></td>
+  <td class='roman-numerals'>roman-numerals</td>
+  <td><code>xxxviii</code></td>
+</tr>
+<tr>
+  <td align='right'>376</td>
+  <td><code>you</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>you</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>you</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>i</code></td>
+</tr>
+</tbody>
+
+</tbody>
+</table>
+
+<script language="javascript" type="text/javascript">
+//<![CDATA[
+	setFilterGrid( "SpecialCases", {
+	 	grid: true,
+		paging: true,
+		paging_length: 100,
+		rows_counter: true,
+                col_0: "none",
+                col_2: "select",
+                col_4: "select",
+                col_6: "select",
+		display_all_text: " [ Show all ] ",
+		sort_select: true,
+		loader: true,
+		loader_text: "Filtering data..."
+	}, 0 );
+//]]>
+</script>
+</body>
+</html>

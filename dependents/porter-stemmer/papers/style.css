@@ -1,0 +1,336 @@
+/*////////////////////////////////////////////////
+--------------------------------------------------
+*	Apaxy by @adamwhitcroft
+*	http://adamwhitcroft.com/apaxy/
+-------------------------------------------------- 
+////////////////////////////////////////////////*/
+
+html {
+	min-height:100%;
+	border:10px solid #ECEEF1;
+	color:#228; /* color:#61666c; */
+	//font-weight:400;
+	font-weight:500;
+//	font-size:1em;
+	font-family:'Open Sans', sans-serif;
+//	line-height:1.5em;
+}
+
+/*////////////////////////////////////////////////
+--------------------------------------------------
+*	Type
+-------------------------------------------------- 
+////////////////////////////////////////////////*/
+body{ 
+	margin:15px;
+	padding:5px;
+	border:0px solid #666;
+	background-color:#f4f4f4;
+}
+h1,h2 {
+	color:#2a2a2a;
+	font-weight:400;
+}
+
+h1 {
+	margin-bottom:1em;
+}
+
+h2 {
+	margin-top:1em;
+	margin-bottom:1em;
+}
+th, td {
+    padding: 4px;
+}
+
+small {
+	font-size:.75em;
+}
+
+	small span {
+		display:inline-block;
+		margin-right:5px;
+		width:20px;
+		height:20px;
+		border:1px solid #f32236;
+		-webkit-border-radius:40px;
+		   -moz-border-radius:40px;
+		    -ms-border-radius:40px;
+		     -o-border-radius:40px;
+		        border-radius:40px;
+		color:#f32236;
+		text-align:center;
+		font-weight:bold;
+		line-height:20px;
+	}
+
+a {
+	color:#223366; /* color:#442288;  */
+	font-weight:bold;
+	text-decoration:none;
+}
+
+a:hover {
+	color:#aaaaff; /* #f37c4c; */
+}
+
+code,pre {
+	color:#2a2a2a;
+	font-family:consolas,monospace;
+	font-size:1em;
+}
+
+pre {
+	overflow:auto;
+	margin-bottom:0.25; /*0.5em; /* 1.5em; */
+	padding:0; /*0.125em; /* 1em; */
+	-webkit-border-radius:3px;
+	   -moz-border-radius:3px;
+	    -ms-border-radius:3px;
+	     -o-border-radius:3px;
+	        border-radius:3px;
+	background:#ECEEF1;
+        word-wrap: break-word;	
+	font-size:inherit;
+}
+
+.bttn {
+	display:inline-block;
+	margin-top:35px;
+	padding:.5em 4em;
+	-webkit-border-radius:3px;
+	   -moz-border-radius:3px;
+	    -ms-border-radius:3px;
+	     -o-border-radius:3px;
+	        border-radius:3px;
+	border-radius:3px;
+	background:#f32236 url(img/bttn-bg.png) repeat center left;
+	color:white;
+	text-align:center;
+	-webkit-transition:background-position 4s linear;
+	   -moz-transition:background-position 4s linear;
+	    -ms-transition:background-position 4s linear;
+	     -o-transition:background-position 4s linear;
+	        transition:background-position 4s linear;
+}
+
+	.bttn:hover {
+		background:#f32236 url(img/bttn-bg.png) repeat center right;
+		text-decoration:none;
+	}
+
+.tweetThis {
+	text-align:center;
+}
+
+	.tweetThis .tweet {
+		padding:0;
+		width:204px;
+	}
+
+	.tweetThis img {
+		display:block;
+		margin-left:77px;
+	}
+
+	/* Adapted from https://github.com/AdamWhitcroft/CSS.Tooltips/blob/master/css-tooltips.css */
+
+	[data-tip] {
+		position:relative;
+	}
+
+	[data-tip]:after {
+		position:absolute;
+		top:-35px;
+		left:50%;
+		z-index:9;
+		display:none;
+		margin-left:-102px;
+		padding:.5em 0; 
+		width:204px;
+		height:18px;
+		-webkit-border-radius:3px;
+		   -moz-border-radius:3px;
+		    -ms-border-radius:3px;
+		     -o-border-radius:3px;
+		        border-radius:3px;
+		background:#ECEEF1;
+		color:#61666c;
+		content:attr(data-tip);
+		font-size: 0.875em;
+		line-height:18px;
+	}
+
+	[data-tip]:hover:after {
+		display:block;
+	}
+
+	[data-tip]:active:after {
+		content:"Thanks!";
+	}
+
+.standout {
+	color: blue;
+}
+
+.hit {
+        color:#ff2;
+        background-color: #22f;
+}
+
+.book {
+        color:#448;/*  772;*/
+        font-weight:bold;
+}
+
+.heading {
+        font-weight:bold;
+}
+
+.chapter {
+        font-weight:bold;
+}
+
+.verse {
+        font-weight:bold;
+}
+.label {
+        color:#772; /* 882; */
+        font-weight:bold;
+        /*background-color: #ff8; */
+}
+
+.total {
+        color:black; /* 882; */
+        font-weight:bold;
+}
+.analysis {
+        color:#228; /* 882; */
+        font-weight:bold;
+        /*background-color: #ff8; */
+}
+.unchanged {
+        color:#556; /* 882; */
+        font-weight:bold;
+        /*background-color: #ff8; */
+}
+.undersize {
+        color:#228; /* 882; */
+        font-weight:bold;
+        /*background-color: #ff8; */
+}
+.invalid {
+    color:#a66;
+    font-weight:bold;
+}
+.roman-numerals {
+    color:#b22;
+    font-weight:bold;
+}
+.non-alphabetic {
+    color:#a44;
+    font-weight:bold;
+}
+
+.absent {
+        color:#822; /* 882; */
+        font-weight:bold;
+        /*background-color: #ff8; */
+}
+
+.stemmed {
+        color:#828; /* 882; */
+        font-weight:bold;
+        /*background-color: #ff8; */
+}
+.present {
+        color:#282; /* 882; */
+        font-weight:bold;
+        /*background-color: #ff8; */
+}
+.base {
+        color:#286; /* 882; */
+        font-weight:bold;
+        /*background-color: #ff8; */
+}
+.irregular {
+        color:#286; /* 882; */
+        font-weight:bold;
+        /*background-color: #ff8; */
+}
+.stopword {
+        color:#288; /* 882; */
+        font-weight:bold;
+        /*background-color: #ff8; */
+}
+.entry {
+	color: red;
+	font-weight: bold;
+	font-size:1.5em;
+}
+.source {
+	text-align: right;
+	font-weight: italic;
+}
+
+/*////////////////////////////////////////////////
+--------------------------------------------------
+*	Structure
+-------------------------------------------------- 
+////////////////////////////////////////////////*/
+
+.island {
+	margin:0 auto 1.5em auto;
+	max-width:800px;
+}
+
+.header {
+	margin-top:20px;
+	margin-bottom:20px;
+	text-align:center;
+}
+
+.mytable {
+	width:100%;
+        font-size:14px;
+	border:1px solid #ccc;
+        background-color:#fefefe;
+}
+
+/*====================================================
+	- General html elements
+=====================================================*/
+caption{
+    margin:10px 0 0 5px;
+    padding:10px;
+    text-align:left; 
+}
+div.tools{ margin:5px; }
+div.tools input{ background-color:#f4f4f4; border:2px outset #f4f4f4; margin:2px; }
+th{ background-color:#003366; color:#FFF; padding:2px; border:1px solid #ccc; }
+td{ padding:2px; border-bottom:1px solid #ccc; border-right:1px solid #ccc; }
+.tfoot{ background-color:#003366; color:#FFF; padding:2px; border:1px solid #ccc; }
+.header img { margin-bottom:1em; }
+.header p { align:left; }
+.example { text-align:center; }
+.example img { max-width:100%; }
+.demo {
+	margin-bottom:1.5em;
+	padding:1em;
+	background:#ECEEF1;
+	text-align:center;
+}
+.demo p {
+    margin:0;
+}
+.footer {
+	padding:2em;
+	font-size:80%;
+	text-align:center;
+}
+
+.footer p {
+    margin:0;
+}
+

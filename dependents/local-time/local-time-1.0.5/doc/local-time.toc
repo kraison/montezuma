@@ -1,0 +1,13 @@
+@numchapentry{Introduction}{1}{Introduction}{1}
+@numchapentry{Public API}{2}{Public API}{2}
+@numsecentry{Types}{2.1}{Types}{2}
+@numsecentry{Timezones}{2.2}{Timezones}{2}
+@numsecentry{Creating @code {timestamp} Objects}{2.3}{Creating timestamp Objects}{2}
+@numsecentry{Querying @code {timestamp} Objects}{2.4}{Querying timestamp Objects}{3}
+@numsecentry{Manipulating Date and Time Values}{2.5}{Manipulating Date and Time Values}{5}
+@numsecentry{Parsing and Formatting}{2.6}{Parsing and Formatting}{6}
+@numchapentry{Other Features}{3}{Other Features}{9}
+@numsecentry{Reader Macros}{3.1}{}{9}
+@numsecentry{Support for non-Gregorian Calendars}{3.2}{}{9}
+@numchapentry{References}{4}{References}{10}
+@unnchapentry{Index}{10001}{Comprehensive Index}{11}

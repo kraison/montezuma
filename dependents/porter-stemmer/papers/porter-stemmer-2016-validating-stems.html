@@ -1,0 +1,2081 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Extending Porter Stemming with Validation</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" href="./style.css" />
+<link rel="stylesheet" href="filtergrid.css"/>
+<script language="javascript" type="text/javascript" src="actb.js"></script>
+<script language="javascript" type="text/javascript" src="tablefilter.js"></script>
+<script src="./prettify/prettify.js"></script>
+<script src="./prettify/lang-lisp.js"></script>
+<link href="./prettify/prettify.css" rel="stylesheet" type="text/css">
+<link href="./prettify/allegro.css" rel="stylesheet" type="text/css">
+</head>
+
+<body onload="prettyPrint();">
+
+<h1 align=center>Extending Porter Stemming with Validation<br><small>Roy Anderson<br>2016<br></small></h1>
+
+<h2>ABSTRACT</h2>
+
+<p>This document details the development of the Common Lisp version of Porter Stemmer 1.01
+referred to here as Porter<sup>1</sup>.
+This is a well established implementation of a suffix-stripping algorithm.
+The new stemmer is a <a href="https://en.wikipedia.org/wiki/Stemming">hybrid</a> 
+combining suffix removal with a Lexicon (database of word forms)
+for word validation.
+This document compares outcomes from Porter<sup>1</sup>, Porter<sup>2</sup>, and the new version:
+Porter<sup>3</sup>. 
+All three versions aim to increase the success rate of stemming by suffix or word recognition. 
+Porter<sup>2</sup> rewrites some Porter<sup>1</sup> suffix rules and adds a new kind of rule 
+based on whole word exceptions.
+Porter<sup>3</sup> uses Porter<sup>1</sup> suffix removal but adds a new set of rules which work in 
+conjunction with a word validator. 
+The stemming outcomes using a sample of the Porter<sup>2</sup> test file are compared in parallel.
+In Porter<sup>3</sup>, a valid stem is a member of the set of validated words as determined 
+by a validation function. The original entry point to the Porter stemmer (<code>stem</code>)
+continues to return Porter<sup>1</sup> results (the shortest possible word forms) according to stemming rules
+but without reference to valid words. 
+Porter<sup>2</sup> encodes exceptions whereby the whole input word is tested possibly bypassing
+overly aggressive and blind stemming rules. 
+But Porter<sup>3</sup> introduces a new entry point (<code>stem-to-valid-word</code>) which 
+has a different contract: to find the first valid stem as determined by a supplied <em>validation function</em>.</p>
+
+<p>This development of Porter<sup>1</sup> was motivated by the need of linguistics 
+applications for true stems (i.e. <em>base forms</em>) 
+while honouring the existing behaviour for Information Retrieval applications based on the 
+Porter<sup>1</sup> Stemming Algorithm. 
+This new version (Porter<sup>3</sup>) has been tested using the original test files that come with
+Porter<sup>1</sup> and Porter<sup>2</sup> (see below). 
+Using the <em>word validation</em> function and lexicon included in Porter<sup>3</sup>,
+there are a minority of unrecognised words (about 10%) but most words yield either valid stems present
+in the lexicon or are stemmed to a lexicon word. 
+When compared in parallel to Porter<sup>1</sup>, Porter<sup>3</sup> not only satisfies the need to
+produce valid stems, but it also satisfies the goal of bringing together (conflating) inflected word forms to a
+single base form. Also, Porter<sup>3</sup> performs nearly twice as fast as Porter<sup>1</sup>.</p>
+
+<h2>INTRODUCTION</h2>
+
+<p>Porter<sup>1</sup> reduces groups of terms by condensing them into a single string,
+even if the string is not a valid word (as would be determined by a dictionary lookup). 
+For example, given the inflected forms of CONNECT, removal of the suffixes -ED, -ING, -ION, -IONS
+results in the single term CONNECT which happens to be a valid word.
+On the other hand, removal of the suffixes -E, -ED, -EMENT, -EMENTS from inflected forms of ABATE results
+in the invalid word: ABAT. This is not an error but rather a feature of Porter Stemmer 1.x!
+Suffix stripping is intended to reduce the total number of terms for an information retrieval system, 
+and hence reduces the size and complexity of the data in the system. Again, the purpose of suffix stripping
+is to reduce the number of word forms in a consistent manner.</p>
+
+<p>Porter Stemmer 3.0, in contrast to the original algorithm, introduces stem validation while
+retaining the established stem stripping capacity that has made the Porter Stemmer so popular over the past decades.
+In the Porter Stemmer 3.0 algorithm, the stemming process is negotiated by calls to a word
+validator which can be either supplied by the stemmer, or passed amongst the arguments to the stem routine.</p>
+
+<h2>Stem Validation</h2>
+
+<p>Stem validation profoundly affects the behaviour of the Stemmer. With validation, (Porter<sup>3</sup>)
+output is guaranteed to be either a valid word, or it is accompanied by a <span class=absent>absent</span>
+outcome designator. A negative (i.e. NIL) return value from the validation test does not necessarily mean
+that a word is misspelt, but this is a definite possibility.
+Alternatively, the stem form may simply be absent from the set of valid words.
+The following comparison of Porter<sup>1</sup> to Porter<sup>3</sup> using the first 2000 Porter<sup>2</sup>
+<a href='http://snowball.tartarus.org/algorithms/english/diffs.txt'>diffs file</a> (two columns, the first being
+the input word and the second the Porter<sup>2</sup> output) demonstrates the strengths and weaknesses
+of the three interpretations of stemming. The number of sample words (2000) was chosen as a balance between
+maximizing the sample size and retaining responsiveness of the Javascript 
+<a href='http://tablefilter.free.fr/'>tablefilter</a> routines which provide table paging
+and column filtering.
+Note that Porter<sup>1</sup> and Porter<sup>2</sup> always return either a stripped word or the input word 
+if no rules can be applied. Similarly, Porter<sup>3</sup> may return the input word with an
+<span class=absent>absent</span> outcome if the stemming rules do not lead to a valid word. 
+In addition, Porter<sup>3</sup> may short circuit suffix stripping rules if the validation test returns
+an early non-NIL result. 
+In the comparison of Porter<sup>1-3</sup>, the following outcome designations have been developed and 
+may appear in the Stemming Outcomes Analyses columns.</p>
+
+<h3>Stemming Outcomes</h3>
+
+<ul id="outcome-designators">
+
+<li><span class='absent'>absent</span>
+<p>Porter<sup>3</sup> only: the validator returned NIL because the word is neither a valid word nor does
+suffix removal yield a valid word. The word may be misspelt or it could be a proper noun that is
+not included in the list of valid words. It is most likely that this would be handled by the caller of
+the Stemmer by using the input word without stemming.</p></li>
+
+<li id="base"><span class='base'>base</span>
+<p>Porter<sup>3</sup>: the Stemmer was given a word that is in the dictionary with an associated
+stem form. No stemming takes place and the base form is returned.</p></li>
+
+<li id="invalid"><span class='invalid'>invalid</span>
+<p>Porter<sup>1 and 2</sup>: the Stemmer returned a word that is not in the Porter<sup>3</sup> Lexicon. 
+Note that Porter<sup>3</sup> handles these words by returning an outcome designator of 
+<span class=absent>absent.</span></p></li>
+
+<li id="irregular"><span class='irregular'>irregular</span>
+<p>Porter<sup>3</sup>: the Stemmer identified a word in the finite list of inflected pairs of irregular word forms. 
+The irregular words do not necessarily conform to the usual inflection patterns (e.g. thought/think, or sink/sank)
+so Porter<sup>3</sup> bypasses suffix removal and returns the associated base form.</p></li>
+
+<li id="nonalphabetic"><span class='non-alphabetic'>non-alphabetic</span>
+<p>The Stemmer's test for non-alphabetic characters excludes words with any digits, spaces or punctuation.</p></li>
+
+<li id="roman"><span class='roman-numerals'>roman-numerals</span>
+<p>Porter<sup>3</sup>: this analysis identifies a category of character sequences that should not be stemmed.
+The code was derived from a couple of routines found at 
+<a href="https://www.rosettacode.org/wiki/Roman_numerals/Decode">www.rosettacode.org</a>.
+However, the rosetta code was based on the assumption that the argument is always a well formed string of 
+Roman numerals. 
+The code has been modified to reject any sequences which include invalid numerals or 
+which are not well formed. This is determined by re-encoding the Arabic number into Roman numerals.
+If this decode-encode operation finds the input and output is the same number digit for digit, then
+a Roman Number identified.</p></li>
+
+<li id="present"><span class='present'>present</span>
+<p>No stemming rules are applied if a word is a member of the Lexicon.</p></li>
+
+<li id="stemmed"><span class='stemmed'>stemmed</span><p>The Stemmer successfully generated a valid stem word which is distinct
+from the input word.</p></li>
+
+<li id="unchanged"><span class='unchanged'>unchanged</span><p>Porter<sup>1</sup> and Porter<sup>2</sup>:
+No stemming rules were found that could be applied to the input word. 
+Note that this outcome is handled as an <span class='absent'>absent</span> or a 
+<span class='present'>present</span> outcome by Porter<sup>3</sup>.</p></li>
+
+<li id="undersize"><span class='undersize'>undersize</span>
+<p>No stemming was attempted because the word is too short.
+
+</ul>
+
+<p>The analysis of Porter<sup>1</sup> to Porter<sup>3</sup> stemming outcomes
+over the test sample words (Figure 1) highlights important differences between the
+approaches: Porter<sup>1</sup> always returns a string, regardless of whether
+it is a member of the set of valid words. Outputs from Porter<sup>1</sup> and <sup>2</sup>
+has been given a stemming outcome in order to compare the outputs from the three versions of
+the Stemmer.
+Porter<sup>2</sup> improves the output quality visible in the reduction of invalid outcomes
+and increase in the number of successfully stemmed words but it achieves this
+improvement by coding more exceptions to Porter<sup>1</sup> rules.
+Porter<sup>3</sup> returns a valid word as determined by the <em>validator</em> which
+by default, makes reference to the Lexicon. 
+
+If the validator represents membership of a rich source of words it will tend to be too generous 
+when validating inflected word forms. This is evident in the limited
+sample of results in the Stemming Outcomes: many inflected forms are treated as valid even though they are
+not truly a stemmed base form (i.e. the desired uninflected word form). 
+One solution for this would be to remove non-base forms from those that should be in the set of
+of stem forms. However, this is a major task there being over 100,000 word forms in a typical list
+such as the <a href='http://gcide.gnu.org.ua/'>GCIDE</a> list of entries.
+</p>
+
+<h2>Summaries of Stemming Outcomes</h2>
+
+<p id="stemming-summary">Figures 1, 2, and 3 summarise stemming outcomes from the
+Porter<sup>2</sup> <a href='http://snowball.tartarus.org/algorithms/english/diffs.txt'>diffs</a> word list:
+Figure 1 summarises outcomes for the first 2000 diffs words. 
+Figure 2 covers outcomes for all the test words (nearly 30,000 words). 
+Figure 3 summarises outcomes for which the Porter<sup>3</sup> outcome was either irregular or Roman numerals.
+The diffs file has two columns: an input word and the Porter<sup>2</sup> output.
+The Porter<sup>1</sup> output was generated from Porter<sup>3</sup> running in Stemmer<sup>1</sup> mode.
+The Porter<sup>2</sup> algorithm is not available in Common Lisp (at the time of writing)
+but the output in the diffs file is sufficient for the purposes of comparison of the three
+implementations of stemming.
+All stemming outcomes have been analysed using a new snippet of Porter<sup>3</sup> code:
+<a href="porter-stemmer-2016-source-lisp.html#analyse">analyse</a>.</p>
+
+<table class='table' align='center' width='80%'>
+  <caption>Figure 1. Summary of stemming of the first 2000 diffs lines with outcomes from Porter<sup>1</sup>, <sup>2</sup> and <sup>3</sup>.</caption>
+  <thead>
+  <tr>
+    <th align='left'>Outcome</th>
+    <th align='right'>Porter<sup>1</sup></th>
+    <th align='right'>Porter<sup>2</sup></th>
+    <th align='right'>Porter<sup>3</sup></th>
+    <th align='right'>Porter<sup>1</sup>%</th>
+    <th align='right'>Porter<sup>2</sup>%</th>
+    <th align='right'>Porter<sup>3</sup>%</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr class='absent'>
+    <td>absent</td>
+    <td align='right'>0</td>
+    <td align='right'>0</td>
+    <td align='right'>261</td>
+    <td align='right'>0%</td>
+    <td align='right'>0%</td>
+    <td align='right'>13%</td>
+  </tr>
+  <tr class='base'>
+    <td>base</td>
+    <td align='right'>0</td>
+    <td align='right'>0</td>
+    <td align='right'>352</td>
+    <td align='right'>0%</td>
+    <td align='right'>0%</td>
+    <td align='right'>18%</td>
+  </tr>
+  <tr class='invalid'>
+    <td>invalid</td>
+    <td align='right'>912</td>
+    <td align='right'>843</td>
+    <td align='right'>0</td>
+    <td align='right'>46%</td>
+    <td align='right'>42%</td>
+    <td align='right'>0%</td>
+  </tr>
+  <tr class='irregular'>
+    <td>irregular</td>
+    <td align='right'>0</td>
+    <td align='right'>0</td>
+    <td align='right'>10</td>
+    <td align='right'>0%</td>
+    <td align='right'>0%</td>
+    <td align='right'>0%</td>
+  </tr>
+  <tr class='non-alphabetic'>
+    <td>non-alphabetic</td>
+    <td align='right'>14</td>
+    <td align='right'>14</td>
+    <td align='right'>14</td>
+    <td align='right'>1%</td>
+    <td align='right'>1%</td>
+    <td align='right'>1%</td>
+  </tr>
+  <tr class='present'>
+    <td>present</td>
+    <td align='right'>0</td>
+    <td align='right'>0</td>
+    <td align='right'>1005</td>
+    <td align='right'>0%</td>
+    <td align='right'>0%</td>
+    <td align='right'>50%</td>
+  </tr>
+  <tr class='stemmed'>
+    <td>stemmed</td>
+    <td align='right'>540</td>
+    <td align='right'>560</td>
+    <td align='right'>356</td>
+    <td align='right'>27%</td>
+    <td align='right'>28%</td>
+    <td align='right'>18%</td>
+  </tr>
+  <tr class='unchanged'>
+    <td>unchanged</td>
+    <td align='right'>518</td>
+    <td align='right'>567</td>
+    <td align='right'>0</td>
+    <td align='right'>26%</td>
+    <td align='right'>28%</td>
+    <td align='right'>0%</td>
+  </tr>
+  <tr class='undersize'>
+    <td>undersize</td>
+    <td align='right'>16</td>
+    <td align='right'>16</td>
+    <td align='right'>2</td>
+    <td align='right'>1%</td>
+    <td align='right'>1%</td>
+    <td align='right'>0%</td>
+  </tr>
+  <tr class='tfoot'>
+    <td>total input words</td>
+    <td colspan=3 align='right'>2000</td>
+    <td colspan=3 align='right'>100%</td>
+  </tr>
+</tbody>
+</table>
+
+<p>There are nearly 30,000 words in the complete Porter<sup>2</sup> diffs test file. 
+The stemming outcomes for all these words are summarised below (Figure 2) in the outcome 
+terms established for Porter<sup>3</sup>.
+A quick look at the summary for the first 2000 word diffs sample (Figure 1) and the complete diffs file (Figure 2)
+shows that stemming over the complete test file yields consistent results compared to summary in 
+Figure 1 and that Porter<sup>1</sup> and Porter<sup>2</sup>
+do not differ strikingly in spite of the many exceptions added to Porter<sup>2</sup>. 
+Porter<sup>3</sup>, on the other hand, while having weaknesses (a large number of absent words),
+could be improved in coverage and accuracy for the Lexicon. 
+Nevertheless, it is standing up rather well compared to its predecessors.</p>
+
+<table class='table' align='center' width='80%'>
+  <caption>Figure 2. Summary of stemming for the complete diffs file with outcomes from 
+Porter<sup>1</sup>, <sup>2</sup> and <sup>3</sup>.</caption>
+  <thead>
+  <tr>
+    <th align='left'>Outcome</th>
+    <th align='right'>Porter<sup>1</sup></th>
+    <th align='right'>Porter<sup>2</sup></th>
+    <th align='right'>Porter<sup>3</sup></th>
+    <th align='right'>Porter<sup>1</sup>%</th>
+    <th align='right'>Porter<sup>2</sup>%</th>
+    <th align='right'>Porter<sup>3</sup>%</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr class='absent'>
+    <td>absent</td>
+    <td align='right'>0</td>
+    <td align='right'>0</td>
+    <td align='right'>3409</td>
+    <td align='right'>0%</td>
+    <td align='right'>0%</td>
+    <td align='right'>12%</td>
+  </tr>
+  <tr class='base'>
+    <td>base</td>
+    <td align='right'>0</td>
+    <td align='right'>0</td>
+    <td align='right'>5845</td>
+    <td align='right'>0%</td>
+    <td align='right'>0%</td>
+    <td align='right'>20%</td>
+  </tr>
+  <tr class='invalid'>
+    <td>invalid</td>
+    <td align='right'>11560</td>
+    <td align='right'>10452</td>
+    <td align='right'>0</td>
+    <td align='right'>39%</td>
+    <td align='right'>36%</td>
+    <td align='right'>0%</td>
+  </tr>
+  <tr class='irregular'>
+    <td>irregular</td>
+    <td align='right'>0</td>
+    <td align='right'>0</td>
+    <td align='right'>329</td>
+    <td align='right'>0%</td>
+    <td align='right'>0%</td>
+    <td align='right'>1%</td>
+  </tr>
+  <tr class='non-alphabetic'>
+    <td>non-alphabetic</td>
+    <td align='right'>14</td>
+    <td align='right'>14</td>
+    <td align='right'>14</td>
+    <td align='right'>0%</td>
+    <td align='right'>0%</td>
+    <td align='right'>0%</td>
+  </tr>
+  <tr class='present'>
+    <td>present</td>
+    <td align='right'>0</td>
+    <td align='right'>0</td>
+    <td align='right'>14064</td>
+    <td align='right'>0%</td>
+    <td align='right'>0%</td>
+    <td align='right'>48%</td>
+  </tr>
+  <tr class='roman-numerals'>
+    <td>roman-numerals</td>
+    <td align='right'>0</td>
+    <td align='right'>0</td>
+    <td align='right'>43</td>
+    <td align='right'>0%</td>
+    <td align='right'>0%</td>
+    <td align='right'>0%</td>
+  </tr>
+  <tr class='stemmed'>
+    <td>stemmed</td>
+    <td align='right'>8657</td>
+    <td align='right'>9203</td>
+    <td align='right'>5652</td>
+    <td align='right'>29%</td>
+    <td align='right'>31%</td>
+    <td align='right'>19%</td>
+  </tr>
+  <tr class='unchanged'>
+    <td>unchanged</td>
+    <td align='right'>9009</td>
+    <td align='right'>9571</td>
+    <td align='right'>0</td>
+    <td align='right'>31%</td>
+    <td align='right'>33%</td>
+    <td align='right'>0%</td>
+  </tr>
+  <tr class='undersize'>
+    <td>undersize</td>
+    <td align='right'>177</td>
+    <td align='right'>177</td>
+    <td align='right'>61</td>
+    <td align='right'>1%</td>
+    <td align='right'>1%</td>
+    <td align='right'>0%</td>
+  </tr>
+  <tr class='tfoot'>
+    <td>total input words</td>
+    <td colspan=3 align='right'>29417</td>
+    <td colspan=3 align='right'>100%</td>
+  </tr>
+</tbody>
+</table>
+
+
+<p>Figure 3 summarises stemming outcomes for Porter<sup>1</sup> and Porter<sup>2</sup>
+for which Porter<sup>3</sup> outcomes are <span class=irregular>irregular</span> or 
+<span class=roman-numerals>Roman numerals</span>. These are new outcomes
+for the Porter Stemmer and it is interesting to know how these special cases were handled in
+the earlier implementations. Clearly, most of these words were not being stemmed at all.</p>
+
+<table class='table' align='center' width='80%'>
+<caption>Figure 3. Summary of stemming for which the Porter<sup>3</sup> outcome
+is either irregular or Roman-numerals.</caption>
+  <thead>
+  <tr>
+    <th align='left'>Outcome</th>
+    <th align='right'>Porter<sup>1</sup></th>
+    <th align='right'>Porter<sup>2</sup></th>
+    <th align='right'>Porter<sup>3</sup></th>
+    <th align='right'>Porter<sup>1</sup>%</th>
+    <th align='right'>Porter<sup>2</sup>%</th>
+    <th align='right'>Porter<sup>3</sup>%</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr class='invalid'>
+    <td>invalid</td>
+    <td align='right'>26</td>
+    <td align='right'>23</td>
+    <td align='right'>0</td>
+    <td align='right'>7%</td>
+    <td align='right'>6%</td>
+    <td align='right'>0%</td>
+  </tr>
+  <tr class='irregular'>
+    <td>irregular</td>
+    <td align='right'>0</td>
+    <td align='right'>0</td>
+    <td align='right'>329</td>
+    <td align='right'>0%</td>
+    <td align='right'>0%</td>
+    <td align='right'>88%</td>
+  </tr>
+  <tr class='roman-numerals'>
+    <td>roman-numerals</td>
+    <td align='right'>0</td>
+    <td align='right'>0</td>
+    <td align='right'>43</td>
+    <td align='right'>0%</td>
+    <td align='right'>0%</td>
+    <td align='right'>12%</td>
+  </tr>
+  <tr class='stemmed'>
+    <td>stemmed</td>
+    <td align='right'>44</td>
+    <td align='right'>40</td>
+    <td align='right'>0</td>
+    <td align='right'>12%</td>
+    <td align='right'>11%</td>
+    <td align='right'>0%</td>
+  </tr>
+  <tr class='unchanged'>
+    <td>unchanged</td>
+    <td align='right'>290</td>
+    <td align='right'>297</td>
+    <td align='right'>0</td>
+    <td align='right'>78%</td>
+    <td align='right'>80%</td>
+    <td align='right'>0%</td>
+  </tr>
+  <tr class='undersize'>
+    <td>undersize</td>
+    <td align='right'>12</td>
+    <td align='right'>12</td>
+    <td align='right'>0</td>
+    <td align='right'>3%</td>
+    <td align='right'>3%</td>
+    <td align='right'>0%</td>
+  </tr>
+  <tr class='tfoot'>
+    <td>total input words</td>
+    <td colspan=3 align='right'>372</td>
+    <td colspan=3 align='right'>100%</td>
+  </tr>
+</table>
+
+<h3>Parallel Stemming Outcomes</h3>
+
+<p id='sample-outcomes'>Input words and Porter<sup>2</sup> outputs are from the
+<a href="http://snowball.tartarus.org/algorithms/english/diffs.txt">Porter<sup>2</sup> diffs file</a>.
+The outputs from the three versions of the Porter Stemming Algorithm are presented in parallel.
+The columns consist of the input word, followed by each analysis designator and the output for each
+version of the Algorithm.
+Note that the tables use <a href="http://tablefilter.free.fr/">TableFilter</a> which supply
+pagination and column filtering. This is intended to assist the investigation of Porter Stemming.
+Parallel Stemming outcomes treatments are:</p> 
+
+<ol>
+<li>The <a href="porter-stemmer-2016-parallel.html">parallel stemming of the first 2000 lines</a> of the
+Porter<sup>2</sup> diffs file.</li>
+<li>The complete diffs file with Porter<sup>3</sup> outcomes that are considered to be 
+<a href="porter-stemmer-2016-parallel-special-cases.html">special cases</a>:
+<span class=irregular>irregular</span> or <span class=roman-numerals>roman-numerals</span>.
+</ol>
+
+<h3>Parallel Stemming Observations</h3>
+
+<p>Clearly, Porter<sup>1</sup> and Porter<sup>2</sup> outputs are more similar to each other
+than to Porter<sup>3</sup> but Porter<sup>2</sup> improves outcomes by about 10% compared to
+Porter<sup>1</sup> in the reduction of <span class=invalid>invalid</span> outcomes and increase of
+<span class=stemmed>stemmed</span> and <span class=unchanged>unchanged</span> words.
+However, Porter<sup>1</sup> and Porter<sup>2</sup> both result in a high number of
+words which are considered to be <span class=invalid>invalid</span> in this work because they are
+not in the lexicon and they are not stemmed to a word in the Lexicon.
+With the same diffs file input, Porter<sup>3</sup> usually identifies a valid word or else it will fail
+with an <span class="absent">absent</span> outcome (12%). Nearly half the diff words are found in
+the lexicon of valid words (the outcome is <span class=present>present</span>), or the lexicon identifies
+the <span class=base>base</span> form (nearly 20% of the diff words) without needing 
+suffix analysis.
+A further 20% of the diff words are stemmed by the same rules as Porter<sup>1</sup> until
+a valid stem is found.</p>
+
+<h2>Implementation Details</h2>
+
+<p>The <a href="porter-stemmer-2016-source-lisp.html">source code</a> and the commentary in this document are 
+for the Common Lisp implementation of Porter Stemmer Algorithm<sup>3</sup> (Porter<sup>3</sup>). 
+It is provided under the same open source 
+<a href="http://snowball.tartarus.org/license.php">licensing terms and conditions</a> as Porter<sup>1</sup>. 
+Porter<sup>3</sup> is running under LispWorks 6.1 and Allegro Common Lisp 10.0, GNU CLISP 2.49.
+</p>
+
+<h3>Word Validation</h3>
+
+<p>At the core of Porter<sup>3</sup> is a default validator implemented using a hash table which
+constitutes the Lexicon.
+At a minimum, each valid word form (i.e. a string) is mapped to a 
+<a href="porter-stemmer-2016-source-lisp.html#lexeme">lexeme</a>. 
+A word is considered to be valid if it is in the Lexicon, 
+or if a valid word form can be derived by suffix removal.
+If a different validator is needed, it can be passed into the stemmer in place of the default
+routine but it must return either a lexeme object or NIL if it is not a valid word. 
+The membership function for the default Lexicon hash table is <code>#'equal</code> which 
+tests that the characters of two strings are identical.
+The <a href="porter-stemmer-2016-source-lisp.html#load-lexicon">lexicon</a>
+is only loaded when it is required (i.e. the table is to be used and it's empty). 
+The variable <code>*porter-source-file*</code> is assigned to the path name of the Porter<sup>3</sup>
+source file location and it's used to get the path of the lexicon input which is assumed to be in the 
+<code>data</code> subdirectory relative to the source file location.</p>
+
+<h3>Preparing the Lexicon</h3>
+
+<p>Porter<sup>3</sup> draws word entries from three sources:
+<ol>
+  <li>GCIDE index entries.
+    <p>The <a href="http://gcide.gnu.org.ua/">GCIDE 0.51</a>
+      (GNU Collaborative International Dictionary of English)
+      was indexed to get parts of speech and stems.
+      Index entries are processed for Porter<sup>3</sup> by putting headwords
+      into the Lexicon with an an outcome designator and possibly with a base form. 
+      There are currently about 130,000 entries coming from the GCIDE.</p></li>
+
+ <li>Irregular words<p>The forms of irregular words (i.e. morphology) can't be described by general rules
+     of regular word formation. There are about 1000 lexemes for 
+     <a href="irregular-words.html">irregular words</a>. 
+     These lexemes are loaded after GCIDE entries and may replace GCIDE lexicon entries.</li>
+
+ <li><a href="porter-stemmer-2016-source-lisp.html#roman-numerals">Roman Numerals Parsing</a>
+   <p>The lexemes recognised as Roman Numerals are the same as those produced by the Common Lisp
+
+<pre class="prettyprint lang-lisp">
+(format nil "~@R" number)
+</pre>
+
+     which yields Roman Numbers for from 1 to 3999 although Porter<sup>3</sup> does not
+     use the <code>format</code> function except to test the Roman Number parser.
+     Roman Numbers are parsed as needed and are not added to the Lexicon though conceptually they
+     could be considered as an extension to the Lexicon.</li>
+</ol>
+
+<p>All these lexemes have been consolidated into <a href="../data/lexemes.txt">lexemes.txt</a>.
+When a word is valid, <a href="porter-stemmer-2016-source-lisp.html#is-a-word">the 
+validator returns a lexeme</a>. Lexemes include a slot for the word, possibly a base form
+and an outcome category keyword. 
+The outcome keyword is currently used only for testing Porter<sup>3</sup> against the earlier versions.
+It could be removed for production systems. 
+Porter<sup>3</sup> also accomodates <a href="porter-stemmer-2016-source-lisp.html#roman-numerals">Roman numerals</a>
+which are not stored in the lexicon but which may yield a Roman number lexeme.
+</p>
+
+<h3>Stemming with and without the Lexicon</h3>
+
+<p>The original main <a href="porter-stemmer-2016-source-lisp.html#stem">entry point</a> into the Porter Stemmer, 
+<code>stem</code>, continues to return the same results as Porter<sup>1</sup>. 
+But, a new <a href="porter-stemmer-2016-source-lisp.html#stem-to-valid-word">
+entry point</a>, <code>stem-to-valid-word</code>, has been added which 
+constrains results according to a validation function which by default uses the Lexicon. 
+If a <code>validate</code> function is not passed to <code>stem-to-valid-word</code>, 
+the default validator is used. 
+Porter<sup>1</sup> compatibility mode output is enabled if the new <code>stem-to-valid-word</code>
+stemmer is passed an explicit value of <code>NIL</code> for the validator. 
+This causes the Stemmer to perform suffix removal without reference to testing for valid words.</p>
+
+<p>There are some new tests enabled by the validator.</p>
+
+<h3>Final steps</h3>
+
+<p>Porter<sup>1</sup> produces output strings that are not necessarily valid words although this is not really a 
+problem for general Information Retrieval applications such as indexing and searching because the stemming results are
+usually hidden and all related words tend to be conflated by suffix removal into a single word form. 
+However, Linguistics applications benefit from a less agressive and blind stemming treatment
+(i.e. not simply getting the shortest possible stem). For this purpose three new stemming functions
+<a href="porter-stemmer-2016-source-lisp.html#final-steps">final-step</a>, have been added to 
+Porter<sup>3</sup> (but not to the Porter<sup>1</sup> code path to resolve base forms from the 
+ravages of suffix stripping. When a validator is passed into the stemmer, the stemmer checks the 
+progressive results from the stemming rules until there are no more rules or a valid stem is identified.</p>
+
+<h2>Preparing the Stemmer</h2>
+
+<p>The best results from Porter<sup>3</sup> would be obtained from a pure set of valid words, 
+consisting of word stems (base forms) and irregular forms with their associated base forms
+from a reliable source that continues to maintain the Lexicon list of words. 
+Such a set of words would maximize the number of correctly 
+stemmed words and minimize the number of <em>present</em> and <em>absent</em> words. 
+In the absence of a better list of word stems, the <a href='http://gcide.gnu.org.ua/'>GCIDE</a>
+was used to get a list of entries (from about 130,000 headwords).
+This means a significant improvement in stemming even if some stems such as "ace" 
+must be reinstated if they are not to be stemmed to "ac".</p>
+
+<p>Porter<sup>3</sup> must deal with the management of suffix removal like
+its predecessors but because its use of a validator, it is gentler on the
+removal of endings. In particular, if a valid word is generated from any
+of the steps leading to the conclusion, the Stemmer will terminate early.</p>
+
+<h2>Analysing Stemmer Outputs</h2>
+
+<p>In order to compare stemming outcomes across Porter<sup>1, 2</sup> and <sup>3</sup>,
+a function has been added to <a href="porter-stemmer-2016-source-lisp.html#analyse">analyse
+Porter Stemming outcomes</a>. 
+Porter<sup>3</sup> already produces an outcome category but the <code>analyse</code> function is needed for 
+the earlier versions. 
+First, it identifies the two preconditions for Porter<sup>1</sup> stemming: 
+<a href="#nonalphabetic">any non-alphabetic characters</a>
+and <a class="undersize" href="#undersize">undersize</a> length.
+Then, it tests for <a class="unchanged"><a href="#unchanged">unchanged</a>
+which means no stemming took place. 
+Finally, the validity of the output word is determined by its presence in the Lexicon.
+If the output word has an entry in the Lexicon, the outcome category is 
+<a class="stemmed" href="#stemmed">stemmed</a>, otherwise, 
+(no entry for the output word) is determined to be <a class="invalid" href="#invalid">invalid</a>.</p>
+
+<p>The former grief over when or whether to remove suffixes (reported in 
+<a href="porter-stemmer-1980-def.html#success-rate">Porter[1]</a>)
+is addressed in Porter<sup>3</sup> by lexical data decision making. The presence of a
+word in the lexicon is taken to mean that it is a valid word, 
+or that there is a valid base form for an inflected word (regular and irregular word forms).
+Lexical data resolves the suffix removal dilemma by specified word information.
+Porter[1] illustrates this problem with the following word pairs:
+SAND/SANDER, WAND/WANDER, and PROBE/PROBATE. Blind suffix stripping can't always reach
+the desired outcomes because the suffix is integral to the word meaning. 
+Porter<sup>1</sup> strikes the suffix removal problem by establishing general rules for 
+suffix removal for all words with certain endings.
+In Porter<sup>3</sup>, if a suffix shouldn't be removed, because the meaning would be different 
+without the suffix, the lexicon will be relied upon for distinguishing between these two cases
+(i.e. to remove a suffix or not).
+Some words are not put through stem removal at all because the lexicon contains sufficient information
+to identify the base form. 
+If no base form for a word is identified in the lexicon, 
+the series of stemming steps based on Porter<sup>1</sup> 
+suffix removal are invoked.
+But, Porter<sup>3</sup> will terminate stemming early if a valid base form is identified before all the rules
+have been executed. 
+The following Table of Porter<sup>1</sup> and Porter<sup>3</sup> stemming outcomes from words based on
+those cited in <a href="porter-stemmer-1980-def.html#success-rate">Porter[1]</a> show some
+significant departures from Poter<sup>1</sup>.</p>
+
+<p>Table of examples from the <a href="porter-stemmer-1980-def.html">Porter<sup>1</sup> paper</a> 
+including Porter<sup>3</sup> stemming outcomes.</p>
+<table id='sanity-check' class='mytable' width='600' align='center'>
+<thead>
+<tr>
+  <th width='10%' align='left'>Line</th>
+  <th width='5%' align='left'>Input</th>
+  <th width='10%' align='left'>Analysis<sup>1</sup></th>
+  <th width='10%' align='left'>Porter<sup>1</sup></th>
+  <th width='10%' align='left'>Analysis<sup>3</sup></th>
+  <th width='10%' align='left'>Porter<sup>3</sup></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td align='right'>1</td>
+  <td><code>activate</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>activ</code></td>
+  <td class='present'>present</td>
+  <td><code>activate</code></td>
+</tr>
+<tr>
+  <td align='right'>2</td>
+  <td><code>activated</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>activ</code></td>
+  <td class='present'>present</td>
+  <td><code>activated</code></td>
+</tr>
+<tr>
+  <td align='right'>3</td>
+  <td><code>active</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>activ</code></td>
+  <td class='present'>present</td>
+  <td><code>active</code></td>
+</tr>
+<tr>
+  <td align='right'>4</td>
+  <td><code>actively</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>activ</code></td>
+  <td class='present'>present</td>
+  <td><code>actively</code></td>
+</tr>
+<tr>
+  <td align='right'>5</td>
+  <td><code>activation</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>activ</code></td>
+  <td class='present'>present</td>
+  <td><code>activation</code></td>
+</tr>
+<tr>
+  <td align='right'>6</td>
+  <td><code>adjustable</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adjust</code></td>
+  <td class='present'>present</td>
+  <td><code>adjustable</code></td>
+</tr>
+<tr>
+  <td align='right'>7</td>
+  <td><code>adjustment</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adjust</code></td>
+  <td class='present'>present</td>
+  <td><code>adjustment</code></td>
+</tr>
+<tr>
+  <td align='right'>8</td>
+  <td><code>adoption</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>adopt</code></td>
+  <td class='present'>present</td>
+  <td><code>adoption</code></td>
+</tr>
+<tr>
+  <td align='right'>9</td>
+  <td><code>agreed</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>agre</code></td>
+  <td class='base'>base</td>
+  <td><code>agree</code></td>
+</tr>
+<tr>
+  <td align='right'>10</td>
+  <td><code>airliner</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>airlin</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>airline</code></td>
+</tr>
+<tr>
+  <td align='right'>11</td>
+  <td><code>allowance</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>allow</code></td>
+  <td class='present'>present</td>
+  <td><code>allowance</code></td>
+</tr>
+<tr>
+  <td align='right'>12</td>
+  <td><code>analogously</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>analog</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>analogous</code></td>
+</tr>
+<tr>
+  <td align='right'>13</td>
+  <td><code>angularity</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>angular</code></td>
+  <td class='present'>present</td>
+  <td><code>angularity</code></td>
+</tr>
+<tr>
+  <td align='right'>14</td>
+  <td><code>archprelate</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>archprel</code></td>
+  <td class='present'>present</td>
+  <td><code>archprelate</code></td>
+</tr>
+<tr>
+  <td align='right'>15</td>
+  <td><code>best</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>best</code></td>
+  <td class='base'>base</td>
+  <td><code>good</code></td>
+</tr>
+<tr>
+  <td align='right'>16</td>
+  <td><code>better</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>better</code></td>
+  <td class='base'>base</td>
+  <td><code>good</code></td>
+</tr>
+<tr>
+  <td align='right'>17</td>
+  <td><code>bled</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>bled</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>bleed</code></td>
+</tr>
+<tr>
+  <td align='right'>18</td>
+  <td><code>bowdlerize</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>bowdler</code></td>
+  <td class='present'>present</td>
+  <td><code>bowdlerize</code></td>
+</tr>
+<tr>
+  <td align='right'>19</td>
+  <td><code>callousness</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>callous</code></td>
+  <td class='present'>present</td>
+  <td><code>callousness</code></td>
+</tr>
+<tr>
+  <td align='right'>20</td>
+  <td><code>caress</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>caress</code></td>
+  <td class='present'>present</td>
+  <td><code>caress</code></td>
+</tr>
+<tr>
+  <td align='right'>21</td>
+  <td><code>caresses</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>caress</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>caress</code></td>
+</tr>
+<tr>
+  <td align='right'>22</td>
+  <td><code>cats</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>cat</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>cat</code></td>
+</tr>
+<tr>
+  <td align='right'>23</td>
+  <td><code>cease</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>ceas</code></td>
+  <td class='present'>present</td>
+  <td><code>cease</code></td>
+</tr>
+<tr>
+  <td align='right'>24</td>
+  <td><code>communism</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>commun</code></td>
+  <td class='present'>present</td>
+  <td><code>communism</code></td>
+</tr>
+<tr>
+  <td align='right'>25</td>
+  <td><code>conditional</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>condit</code></td>
+  <td class='present'>present</td>
+  <td><code>conditional</code></td>
+</tr>
+<tr>
+  <td align='right'>26</td>
+  <td><code>conflate</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>conflat</code></td>
+  <td class='present'>present</td>
+  <td><code>conflate</code></td>
+</tr>
+<tr>
+  <td align='right'>27</td>
+  <td><code>conflate</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>conflat</code></td>
+  <td class='present'>present</td>
+  <td><code>conflate</code></td>
+</tr>
+<tr>
+  <td align='right'>28</td>
+  <td><code>conformably</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>conform</code></td>
+  <td class='present'>present</td>
+  <td><code>conformably</code></td>
+</tr>
+<tr>
+  <td align='right'>29</td>
+  <td><code>connect</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>connect</code></td>
+  <td class='present'>present</td>
+  <td><code>connect</code></td>
+</tr>
+<tr>
+  <td align='right'>30</td>
+  <td><code>connected</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>connect</code></td>
+  <td class='base'>base</td>
+  <td><code>connect</code></td>
+</tr>
+<tr>
+  <td align='right'>31</td>
+  <td><code>connecting</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>connect</code></td>
+  <td class='base'>base</td>
+  <td><code>connect</code></td>
+</tr>
+<tr>
+  <td align='right'>32</td>
+  <td><code>connection</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>connect</code></td>
+  <td class='present'>present</td>
+  <td><code>connection</code></td>
+</tr>
+<tr>
+  <td align='right'>33</td>
+  <td><code>connections</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>connect</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>connection</code></td>
+</tr>
+<tr>
+  <td align='right'>34</td>
+  <td><code>control</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>control</code></td>
+  <td class='present'>present</td>
+  <td><code>control</code></td>
+</tr>
+<tr>
+  <td align='right'>35</td>
+  <td><code>controller</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>control</code></td>
+  <td class='present'>present</td>
+  <td><code>controller</code></td>
+</tr>
+<tr>
+  <td align='right'>36</td>
+  <td><code>deceive</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>deceiv</code></td>
+  <td class='present'>present</td>
+  <td><code>deceive</code></td>
+</tr>
+<tr>
+  <td align='right'>37</td>
+  <td><code>deceiver</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>deceiv</code></td>
+  <td class='present'>present</td>
+  <td><code>deceiver</code></td>
+</tr>
+<tr>
+  <td align='right'>38</td>
+  <td><code>deceivers</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>deceiv</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>deceiver</code></td>
+</tr>
+<tr>
+  <td align='right'>39</td>
+  <td><code>deceiving</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>deceiv</code></td>
+  <td class='base'>base</td>
+  <td><code>deceive</code></td>
+</tr>
+<tr>
+  <td align='right'>40</td>
+  <td><code>deceiving</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>deceiv</code></td>
+  <td class='base'>base</td>
+  <td><code>deceive</code></td>
+</tr>
+<tr>
+  <td align='right'>41</td>
+  <td><code>deception</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>decept</code></td>
+  <td class='present'>present</td>
+  <td><code>deception</code></td>
+</tr>
+<tr>
+  <td align='right'>42</td>
+  <td><code>deceptioning</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>decept</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>deception</code></td>
+</tr>
+<tr>
+  <td align='right'>43</td>
+  <td><code>decisiveness</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>decis</code></td>
+  <td class='base'>base</td>
+  <td><code>decisive</code></td>
+</tr>
+<tr>
+  <td align='right'>44</td>
+  <td><code>defensible</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>defens</code></td>
+  <td class='present'>present</td>
+  <td><code>defensible</code></td>
+</tr>
+<tr>
+  <td align='right'>45</td>
+  <td><code>demonstrable</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>demonstr</code></td>
+  <td class='present'>present</td>
+  <td><code>demonstrable</code></td>
+</tr>
+<tr>
+  <td align='right'>46</td>
+  <td><code>demonstrate</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>demonstr</code></td>
+  <td class='present'>present</td>
+  <td><code>demonstrate</code></td>
+</tr>
+<tr>
+  <td align='right'>47</td>
+  <td><code>dependent</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>depend</code></td>
+  <td class='present'>present</td>
+  <td><code>dependent</code></td>
+</tr>
+<tr>
+  <td align='right'>48</td>
+  <td><code>derivate</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>deriv</code></td>
+  <td class='present'>present</td>
+  <td><code>derivate</code></td>
+</tr>
+<tr>
+  <td align='right'>49</td>
+  <td><code>derivate</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>deriv</code></td>
+  <td class='present'>present</td>
+  <td><code>derivate</code></td>
+</tr>
+<tr>
+  <td align='right'>50</td>
+  <td><code>derive</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>deriv</code></td>
+  <td class='present'>present</td>
+  <td><code>derive</code></td>
+</tr>
+<tr>
+  <td align='right'>51</td>
+  <td><code>differently</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>differ</code></td>
+  <td class='present'>present</td>
+  <td><code>differently</code></td>
+</tr>
+<tr>
+  <td align='right'>52</td>
+  <td><code>digitizer</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>digit</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>digitize</code></td>
+</tr>
+<tr>
+  <td align='right'>53</td>
+  <td><code>effective</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>effect</code></td>
+  <td class='present'>present</td>
+  <td><code>effective</code></td>
+</tr>
+<tr>
+  <td align='right'>54</td>
+  <td><code>electrical</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>electr</code></td>
+  <td class='present'>present</td>
+  <td><code>electrical</code></td>
+</tr>
+<tr>
+  <td align='right'>55</td>
+  <td><code>electricity</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>electr</code></td>
+  <td class='present'>present</td>
+  <td><code>electricity</code></td>
+</tr>
+<tr>
+  <td align='right'>56</td>
+  <td><code>fail</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>fail</code></td>
+  <td class='present'>present</td>
+  <td><code>fail</code></td>
+</tr>
+<tr>
+  <td align='right'>57</td>
+  <td><code>failed</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>fail</code></td>
+  <td class='base'>base</td>
+  <td><code>fail</code></td>
+</tr>
+<tr>
+  <td align='right'>58</td>
+  <td><code>failing</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>fail</code></td>
+  <td class='base'>base</td>
+  <td><code>fail</code></td>
+</tr>
+<tr>
+  <td align='right'>59</td>
+  <td><code>falling</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>fall</code></td>
+  <td class='base'>base</td>
+  <td><code>fall</code></td>
+</tr>
+<tr>
+  <td align='right'>60</td>
+  <td><code>falling</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>fall</code></td>
+  <td class='base'>base</td>
+  <td><code>fall</code></td>
+</tr>
+<tr>
+  <td align='right'>61</td>
+  <td><code>falls</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>fall</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>fall</code></td>
+</tr>
+<tr>
+  <td align='right'>62</td>
+  <td><code>feed</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>feed</code></td>
+  <td class='present'>present</td>
+  <td><code>feed</code></td>
+</tr>
+<tr>
+  <td align='right'>63</td>
+  <td><code>fell</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>fell</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>fall</code></td>
+</tr>
+<tr>
+  <td align='right'>64</td>
+  <td><code>feudalism</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>feudal</code></td>
+  <td class='present'>present</td>
+  <td><code>feudalism</code></td>
+</tr>
+<tr>
+  <td align='right'>65</td>
+  <td><code>file</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>file</code></td>
+  <td class='present'>present</td>
+  <td><code>file</code></td>
+</tr>
+<tr>
+  <td align='right'>66</td>
+  <td><code>filing</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>file</code></td>
+  <td class='base'>base</td>
+  <td><code>file</code></td>
+</tr>
+<tr>
+  <td align='right'>67</td>
+  <td><code>fizz</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>fizz</code></td>
+  <td class='present'>present</td>
+  <td><code>fizz</code></td>
+</tr>
+<tr>
+  <td align='right'>68</td>
+  <td><code>fizzed</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>fizz</code></td>
+  <td class='base'>base</td>
+  <td><code>fizz</code></td>
+</tr>
+<tr>
+  <td align='right'>69</td>
+  <td><code>formality</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>formal</code></td>
+  <td class='present'>present</td>
+  <td><code>formality</code></td>
+</tr>
+<tr>
+  <td align='right'>70</td>
+  <td><code>formality</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>formal</code></td>
+  <td class='present'>present</td>
+  <td><code>formality</code></td>
+</tr>
+<tr>
+  <td align='right'>71</td>
+  <td><code>formalize</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>formal</code></td>
+  <td class='present'>present</td>
+  <td><code>formalize</code></td>
+</tr>
+<tr>
+  <td align='right'>72</td>
+  <td><code>formative</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>form</code></td>
+  <td class='present'>present</td>
+  <td><code>formative</code></td>
+</tr>
+<tr>
+  <td align='right'>73</td>
+  <td><code>generalizations</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>gener</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>generalization</code></td>
+</tr>
+<tr>
+  <td align='right'>74</td>
+  <td><code>good</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>good</code></td>
+  <td class='present'>present</td>
+  <td><code>good</code></td>
+</tr>
+<tr>
+  <td align='right'>75</td>
+  <td><code>goodness</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>good</code></td>
+  <td class='present'>present</td>
+  <td><code>goodness</code></td>
+</tr>
+<tr>
+  <td align='right'>76</td>
+  <td><code>gyroscopic</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>gyroscop</code></td>
+  <td class='present'>present</td>
+  <td><code>gyroscopic</code></td>
+</tr>
+<tr>
+  <td align='right'>77</td>
+  <td><code>hesitancy</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>hesit</code></td>
+  <td class='present'>present</td>
+  <td><code>hesitancy</code></td>
+</tr>
+<tr>
+  <td align='right'>78</td>
+  <td><code>hiss</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>hiss</code></td>
+  <td class='present'>present</td>
+  <td><code>hiss</code></td>
+</tr>
+<tr>
+  <td align='right'>79</td>
+  <td><code>hissed</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>hiss</code></td>
+  <td class='base'>base</td>
+  <td><code>hiss</code></td>
+</tr>
+<tr>
+  <td align='right'>80</td>
+  <td><code>hissing</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>hiss</code></td>
+  <td class='base'>base</td>
+  <td><code>hiss</code></td>
+</tr>
+<tr>
+  <td align='right'>81</td>
+  <td><code>homologous</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>homolog</code></td>
+  <td class='present'>present</td>
+  <td><code>homologous</code></td>
+</tr>
+<tr>
+  <td align='right'>82</td>
+  <td><code>hopeful</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>hope</code></td>
+  <td class='present'>present</td>
+  <td><code>hopeful</code></td>
+</tr>
+<tr>
+  <td align='right'>83</td>
+  <td><code>hopefulness</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>hope</code></td>
+  <td class='base'>base</td>
+  <td><code>hopeful</code></td>
+</tr>
+<tr>
+  <td align='right'>84</td>
+  <td><code>index</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>index</code></td>
+  <td class='present'>present</td>
+  <td><code>index</code></td>
+</tr>
+<tr>
+  <td align='right'>85</td>
+  <td><code>indices</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>indic</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>index</code></td>
+</tr>
+<tr>
+  <td align='right'>86</td>
+  <td><code>inference</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>infer</code></td>
+  <td class='present'>present</td>
+  <td><code>inference</code></td>
+</tr>
+<tr>
+  <td align='right'>87</td>
+  <td><code>irritant</code></td>
+ <td class='invalid'>invalid</td>
+  <td><code>irrit</code></td>
+  <td class='present'>present</td>
+  <td><code>irritant</code></td>
+</tr>
+<tr>
+  <td align='right'>88</td>
+  <td><code>motoring</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>motor</code></td>
+  <td class='present'>present</td>
+  <td><code>motoring</code></td>
+</tr>
+<tr>
+  <td align='right'>89</td>
+  <td><code>necessitate</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>necessit</code></td>
+  <td class='present'>present</td>
+  <td><code>necessitate</code></td>
+</tr>
+<tr>
+  <td align='right'>90</td>
+  <td><code>necessitate</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>necessit</code></td>
+  <td class='present'>present</td>
+  <td><code>necessitate</code></td>
+</tr>
+<tr>
+  <td align='right'>91</td>
+  <td><code>necessity</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>necess</code></td>
+  <td class='present'>present</td>
+  <td><code>necessity</code></td>
+</tr>
+<tr>
+  <td align='right'>92</td>
+  <td><code>necessitous</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>necessit</code></td>
+  <td class='present'>present</td>
+  <td><code>necessitous</code></td>
+</tr>
+<tr>
+  <td align='right'>93</td>
+  <td><code>necessity</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>necess</code></td>
+  <td class='present'>present</td>
+  <td><code>necessity</code></td>
+</tr>
+<tr>
+  <td align='right'>94</td>
+  <td><code>operator</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>oper</code></td>
+  <td class='present'>present</td>
+  <td><code>operator</code></td>
+</tr>
+<tr>
+  <td align='right'>95</td>
+  <td><code>pirate</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>pirat</code></td>
+  <td class='present'>present</td>
+  <td><code>pirate</code></td>
+</tr>
+<tr>
+  <td align='right'>96</td>
+  <td><code>plastered</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>plaster</code></td>
+  <td class='base'>base</td>
+  <td><code>plaster</code></td>
+</tr>
+<tr>
+  <td align='right'>97</td>
+  <td><code>ponies</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>poni</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>peony</code></td>
+</tr>
+<tr>
+  <td align='right'>98</td>
+  <td><code>predication</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>predic</code></td>
+  <td class='present'>present</td>
+  <td><code>predication</code></td>
+</tr>
+<tr>
+  <td align='right'>99</td>
+  <td><code>probate</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>probat</code></td>
+  <td class='present'>present</td>
+  <td><code>probate</code></td>
+</tr>
+<tr>
+  <td align='right'>100</td>
+  <td><code>probate</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>probat</code></td>
+  <td class='present'>present</td>
+  <td><code>probate</code></td>
+</tr>
+<tr>
+  <td align='right'>101</td>
+  <td><code>probates</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>probat</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>probate</code></td>
+</tr>
+<tr>
+  <td align='right'>102</td>
+  <td><code>probation</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>probat</code></td>
+  <td class='present'>present</td>
+  <td><code>probation</code></td>
+</tr>
+<tr>
+  <td align='right'>103</td>
+  <td><code>probe</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>probe</code></td>
+  <td class='present'>present</td>
+  <td><code>probe</code></td>
+</tr>
+<tr>
+  <td align='right'>104</td>
+  <td><code>probes</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>probe</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>probe</code></td>
+</tr>
+<tr>
+  <td align='right'>105</td>
+  <td><code>radically</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>radic</code></td>
+  <td class='present'>present</td>
+  <td><code>radically</code></td>
+</tr>
+<tr>
+  <td align='right'>106</td>
+  <td><code>rate</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>rate</code></td>
+  <td class='present'>present</td>
+  <td><code>rate</code></td>
+</tr>
+<tr>
+  <td align='right'>107</td>
+  <td><code>rational</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>ration</code></td>
+  <td class='present'>present</td>
+  <td><code>rational</code></td>
+</tr>
+<tr>
+  <td align='right'>108</td>
+  <td><code>relate</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>relat</code></td>
+  <td class='present'>present</td>
+  <td><code>relate</code></td>
+</tr>
+<tr>
+  <td align='right'>109</td>
+  <td><code>relate</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>relat</code></td>
+  <td class='present'>present</td>
+  <td><code>relate</code></td>
+</tr>
+<tr>
+  <td align='right'>110</td>
+  <td><code>related</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>relat</code></td>
+  <td class='base'>base</td>
+  <td><code>relate</code></td>
+</tr>
+<tr>
+  <td align='right'>111</td>
+  <td><code>relates</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>relat</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>relate</code></td>
+</tr>
+<tr>
+  <td align='right'>112</td>
+  <td><code>relating</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>relat</code></td>
+  <td class='base'>base</td>
+  <td><code>relate</code></td>
+</tr>
+<tr>
+  <td align='right'>113</td>
+  <td><code>relational</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>relat</code></td>
+  <td class='present'>present</td>
+  <td><code>relational</code></td>
+</tr>
+<tr>
+  <td align='right'>114</td>
+  <td><code>relative</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>rel</code></td>
+  <td class='present'>present</td>
+  <td><code>relative</code></td>
+</tr>
+<tr>
+  <td align='right'>115</td>
+  <td><code>relatively</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>rel</code></td>
+  <td class='present'>present</td>
+  <td><code>relatively</code></td>
+</tr>
+<tr>
+  <td align='right'>116</td>
+  <td><code>relativity</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>rel</code></td>
+  <td class='present'>present</td>
+  <td><code>relativity</code></td>
+</tr>
+<tr>
+  <td align='right'>117</td>
+  <td><code>replacement</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>replac</code></td>
+  <td class='present'>present</td>
+  <td><code>replacement</code></td>
+</tr>
+<tr>
+  <td align='right'>118</td>
+  <td><code>resume</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>resum</code></td>
+  <td class='present'>present</td>
+  <td><code>resume</code></td>
+</tr>
+<tr>
+  <td align='right'>119</td>
+  <td><code>resumed</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>resum</code></td>
+  <td class='base'>base</td>
+  <td><code>resume</code></td>
+</tr>
+<tr>
+  <td align='right'>120</td>
+  <td><code>resumes</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>resum</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>resume</code></td>
+</tr>
+<tr>
+  <td align='right'>121</td>
+  <td><code>resumption</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>resumpt</code></td>
+  <td class='present'>present</td>
+  <td><code>resumption</code></td>
+</tr>
+<tr>
+  <td align='right'>122</td>
+  <td><code>revival</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>reviv</code></td>
+  <td class='present'>present</td>
+  <td><code>revival</code></td>
+</tr>
+<tr>
+  <td align='right'>123</td>
+  <td><code>roll</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>roll</code></td>
+  <td class='present'>present</td>
+  <td><code>roll</code></td>
+</tr>
+<tr>
+  <td align='right'>124</td>
+  <td><code>rolled</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>roll</code></td>
+  <td class='base'>base</td>
+  <td><code>roll</code></td>
+</tr>
+<tr>
+  <td align='right'>125</td>
+  <td><code>roller</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>roller</code></td>
+  <td class='present'>present</td>
+  <td><code>roller</code></td>
+</tr>
+<tr>
+  <td align='right'>126</td>
+  <td><code>rolling</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>roll</code></td>
+  <td class='base'>base</td>
+  <td><code>roll</code></td>
+</tr>
+<tr>
+  <td align='right'>127</td>
+  <td><code>rolls</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>roll</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>roll</code></td>
+</tr>
+<tr>
+  <td align='right'>128</td>
+  <td><code>sand</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>sand</code></td>
+  <td class='present'>present</td>
+  <td><code>sand</code></td>
+</tr>
+<tr>
+  <td align='right'>129</td>
+  <td><code>sander</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>sander</code></td>
+  <td class='absent'>absent</td>
+  <td><code>sander</code></td>
+</tr>
+<tr>
+  <td align='right'>130</td>
+  <td><code>sanders</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>sander</code></td>
+  <td class='present'>present</td>
+  <td><code>sanders</code></td>
+</tr>
+<tr>
+  <td align='right'>131</td>
+  <td><code>sanding</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>sand</code></td>
+  <td class='base'>base</td>
+  <td><code>sand</code></td>
+</tr>
+<tr>
+  <td align='right'>132</td>
+  <td><code>sang</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>sang</code></td>
+  <td class='irregular'>irregular</td>
+  <td><code>sing</code></td>
+</tr>
+<tr>
+  <td align='right'>133</td>
+  <td><code>sensibility</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>sensibl</code></td>
+  <td class='present'>present</td>
+  <td><code>sensibility</code></td>
+</tr>
+<tr>
+  <td align='right'>134</td>
+  <td><code>sensitivity</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>sensit</code></td>
+  <td class='present'>present</td>
+  <td><code>sensitivity</code></td>
+</tr>
+<tr>
+  <td align='right'>135</td>
+  <td><code>sing</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>sing</code></td>
+  <td class='present'>present</td>
+  <td><code>sing</code></td>
+</tr>
+<tr>
+  <td align='right'>136</td>
+  <td><code>sings</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>sing</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>sing</code></td>
+</tr>
+<tr>
+  <td align='right'>137</td>
+  <td><code>size</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>size</code></td>
+  <td class='base'>base</td>
+  <td><code>assize</code></td>
+</tr>
+<tr>
+  <td align='right'>138</td>
+  <td><code>sized</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>size</code></td>
+  <td class='base'>base</td>
+  <td><code>size</code></td>
+</tr>
+<tr>
+  <td align='right'>139</td>
+  <td><code>sizing</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>size</code></td>
+  <td class='base'>base</td>
+  <td><code>size</code></td>
+</tr>
+<tr>
+  <td align='right'>140</td>
+  <td><code>tanned</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>tan</code></td>
+  <td class='base'>base</td>
+  <td><code>tan</code></td>
+</tr>
+<tr>
+  <td align='right'>141</td>
+  <td><code>ties</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>ti</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>tye</code></td>
+</tr>
+<tr>
+  <td align='right'>142</td>
+  <td><code>triplicate</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>triplic</code></td>
+  <td class='present'>present</td>
+  <td><code>triplicate</code></td>
+</tr>
+<tr>
+  <td align='right'>143</td>
+  <td><code>trouble</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>troubl</code></td>
+  <td class='present'>present</td>
+  <td><code>trouble</code></td>
+</tr>
+<tr>
+  <td align='right'>144</td>
+  <td><code>troubled</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>troubl</code></td>
+  <td class='base'>base</td>
+  <td><code>trouble</code></td>
+</tr>
+<tr>
+  <td align='right'>145</td>
+  <td><code>troubles</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>troubl</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>trouble</code></td>
+</tr>
+<tr>
+  <td align='right'>146</td>
+  <td><code>troubling</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>troubl</code></td>
+  <td class='base'>base</td>
+  <td><code>trouble</code></td>
+</tr>
+<tr>
+  <td align='right'>147</td>
+  <td><code>valency</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>valenc</code></td>
+  <td class='present'>present</td>
+  <td><code>valency</code></td>
+</tr>
+<tr>
+  <td align='right'>148</td>
+  <td><code>vietnamization</code></td>
+  <td class='invalid'>invalid</td>
+  <td><code>vietnam</code></td>
+  <td class='absent'>absent</td>
+  <td><code>vietnamization</code></td>
+</tr>
+<tr>
+  <td align='right'>149</td>
+  <td><code>vilely</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>vile</code></td>
+  <td class='base'>base</td>
+  <td><code>vile</code></td>
+</tr>
+<tr>
+  <td align='right'>150</td>
+  <td><code>wand</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>wand</code></td>
+  <td class='present'>present</td>
+  <td><code>wand</code></td>
+</tr>
+<tr>
+  <td align='right'>151</td>
+  <td><code>wander</code></td>
+  <td class='unchanged'>unchanged</td>
+  <td><code>wander</code></td>
+  <td class='present'>present</td>
+  <td><code>wander</code></td>
+</tr>
+<tr>
+  <td align='right'>152</td>
+  <td><code>wandering</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>wander</code></td>
+  <td class='base'>base</td>
+  <td><code>wander</code></td>
+</tr>
+<tr>
+  <td align='right'>153</td>
+  <td><code>wanderment</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>wander</code></td>
+  <td class='present'>present</td>
+  <td><code>wanderment</code></td>
+</tr>
+<tr>
+  <td align='right'>154</td>
+  <td><code>wanders</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>wander</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>wander</code></td>
+</tr>
+<tr>
+  <td align='right'>155</td>
+  <td><code>wands</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>wand</code></td>
+  <td class='stemmed'>stemmed</td>
+  <td><code>wand</code></td>
+</tr>
+</tbody>
+</table>
+
+<script language="javascript" type="text/javascript">
+//<![CDATA[
+	setFilterGrid( "sanity-check", {
+	 	grid: true,
+		paging: true,
+		paging_length: 60,
+		rows_counter: true,
+                col_0: "none",
+                col_2: "select",
+                col_4: "select",
+		loader: true,
+		loader_text: "Filtering data..."
+	});
+//]]>
+</script>
+
+<h2>2. The Extended Algorithm</h2>
+
+Porter<sup>1</sup> consists of a series of stemming steps: <code>step1ab step1c step2 step3 step4 step5</code>. 
+These steps remain and are used both by Porter<sup>3</sup> and Porter<sup>1</sup> modes.
+However, Porter<sup>3</sup> includes additional <a href="porter-stemmer-2016-source-lisp.html#final-steps">steps</a>:
+<code>prelude</code>, <code>final-step[1]</code> and
+<code>final-step[2]</code> which conceptually 
+prepares for a stemming analysis and two final steps which repair stemming mistakes. 
+Currently, the <code>prelude</code> identifies just two suffixes:</p>
+
+<pre>
+   LITIES -> LITY ; abilities
+   TIVITY -> TIVE ; sensitivity
+</pre>
+
+<p>final-step[1]</p>
+
+<pre>
+  ERESS  -> ERER          ; adult(eress)          -> adulterer
+  *d     -> single letter ; occu(rr)              -> occur
+  ELV    -> ELF           ; yours(elv)            -> yours
+  I      -> Y             ; victor(i)             -> victory
+  EST    ->               ; would(est), brav(est) -> would, brav
+  ETH    ->               ; view(eth)             -> view
+  MEN    -> MAN           ; trades(men)           -> tradesman
+</pre>
+
+<p>final-step[2]</p>
+
+<pre>
+  E      ->               ; talk(e)               -> talk
+  *d     -> single letter ; awfu(ll)              -> awful
+  not *E -> E             ; averag                -> average
+</pre>
+
+<pre>
+    (*d and not (*L or *S or *Z))
+</pre>
+
+<h1>Timing Issues</h1>
+
+<p>The following run times were recorded on an HP Pavilion dv7 Notebook PC running Windows 10
+for 1,550,000 stemming operations with three Lisp implementations using the 155 words identified 
+<a href="#sanity-check">above</a>. It appears that the quality of the Lisp machine has greater
+bearing on run times than the implementation of Porter's Stemming algorithm but the best results
+were from LispWorks and Allegro Common Lisp.</p>
+
+<table class="table" width="60%" align="center">
+<caption>Run times for repeats of 155 test words.</caption>
+<thead>
+<tr class="tfoot"><td>Lisp Implementation</td><td>Porter<sup>1</sup></td><td>Porter<sup>3</sup></tr>
+</thead>
+<tbody>
+<tr><td>GNU CLISP 2.49</td><td align="right">14s</td><td align="right">6s</td></tr>
+<tr><td>Allegro CL 10.0</td><td align="right">8s</td><td align="right">3s</td></tr>
+<tr><td>LispWorks Personal Edition 6.1.1</td><td align="right">7s</td><td align="right">4s</td></tr>
+</tbody>
+</table>
+
+<!--
+(compile-file "d:/dependencies/porter-stemmer/porter-stemmer.lisp")
+(load "d:/dependencies/porter-stemmer/porter-stemmer.fas")
+(in-package :ps)
+(time-check2 :algorithm 1)
+(time-check2 :algorithm 3)
+-->
+
+<p>The next set of timings were recorded for 1,176,550 suffix removal operations using the Porter<sup>1</sup>
+test words with the Porter<sup>1</sup> compatibility mode and Porter<sup>3</sup> stemming. 
+The input list consists of 23531 words and stemming of these words is repeated 50 times.</p>
+
+<table class="table" width="60%" align="center">
+<caption>Run times for Porter<sup>1</sup> test words.</caption>
+<thead>
+<tr class="tfoot"><td>Lisp Implementation</td><td>Porter<sup>1</sup></td><td>Porter<sup>3</sup></tr>
+</thead>
+<tbody>
+<tr><td>GNU CLISP 2.49</td><td align="right">14s</td><td align="right">10s</td></tr>
+<tr><td>Allegro CL 10.0</td><td align="right">11s</td><td align="right">8s</td></tr>
+<tr><td>LispWorks Personal Edition 6.1.1</td><td align="right">4s</td><td align="right">4s</td></tr>
+</tbody>
+</table>
+
+<p>When comparing run times for each Lisp machine, there may be an improvement of up to 50%
+from Porter<sup>1</sup> to Porter<sup>3</sup>. The Porter<sup>3</sup> code follows a different
+path compared to Porter<sup>1</sup> in that Porter<sup>3</sup> may short circuit stemming
+rules by early identification of a valid word form. On the other hand, if a valid word is not 
+identified, Porter<sup>3</sup> will take longer because of the added load in word validation.</p>
+
+<h1>Conclusion</h1>
+
+<p>Porter<sup>3</sup> provides additional functionality compared to Porter<sup>1</sup> 
+based on calls to a lexeme validation function.
+The default word validator returns a lexicon entry for all valid words.
+The lexicon has been built from the GCIDE and a list irregular word forms. 
+Stemming is terminated early if a valid word is identified. 
+Porter<sup>3</sup> is up to 50% faster than Porter<sup>1</sup> although speed was not the primary goal for
+this work. However, a typical Porter<sup>3</sup> outcome is reached by one hash table lookup which 
+identifies a Lexicon word.</p>
+
+<h1>Attachments</h1>
+<p>
+<ol>
+<li><a href="porter-stemmer-2016-source-lisp.html">Porter<sup>3</sup> Stemmer Common Lisp Source Code</a></li>
+<li><a href="porter-stemmer-2016-parallel.html">Parallel Stemming Outcomes</a></li>
+<li><a href="../data/lexemes.txt">Lexicon</a></li>
+<li><a href="irregular-words.html">Irregular words</a></li>
+<li>Porter<sup>2</sup> <a href='../data/porter-stemmer2-diffs.txt'>diffs file</a></li>
+<li><a href="porter-stemmer-2016-parallel-special-cases.html">Special cases</a>: Stemming outcomes for which
+Porter<sup>3</sup> yields <span class=irregular>irregular</span> or <span class=roman-numerals>roman-numerals</span></li>
+</ol>
+
+<h1>References</h1>
+<p>
+<ol>
+<li>PORTER, M.F.  <a href="porter-stemmer-1980-def.html">An algorithm for suffix stripping.</a>
+ <em>Program</em>, <em>14</em> (3) 1980 pp 130-137.</li>
+
+<li><a href="https://en.wikipedia.org/wiki/Stemming">Stemming - Wikipedia</a></li>
+</ol>
+</p>
+</body>
+</html>

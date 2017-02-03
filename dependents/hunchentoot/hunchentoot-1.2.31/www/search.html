@@ -1,0 +1,74 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<!-- saved from url=(0059)http://127.0.0.1/hunchentoot/test/parameter_latin1_get.html -->
+<html>
+<head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<title>Hunchentoot GET parameter test</title>
+<style type="text/css"></style>
+<link rel="stylesheet" id="coToolbarStyle" href="chrome-extension://cjabmdjcfcfdmffimndhafhblfmpjdpe/toolbar/styles/placeholder.css" type="text/css">
+<script type="text/javascript" id="cosymantecbfw_removeToolbar">
+(function () {
+				var toolbarElement = {},
+					parent = {},
+					interval = 0,
+					retryCount = 0,
+					isRemoved = false;
+				if (window.location.protocol === 'file:') {
+					interval = window.setInterval(function () {
+						toolbarElement = document.getElementById('coFrameDiv');
+						if (toolbarElement) {
+							parent = toolbarElement.parentNode;
+							if (parent) {
+								parent.removeChild(toolbarElement);
+								isRemoved = true;
+								if (document.body && document.body.style) {									document.body.style.setProperty('margin-top', '0px', 'important');
+								}							}						}
+						retryCount += 1;
+						if (retryCount > 10 || isRemoved) {
+							window.clearInterval(interval);
+						}
+					}, 10);
+				}
+			})();
+</script>
+
+<script type="text/javascript" id="waxCS">var WAX = function () {
+ var _arrInputs; return { getElement: function (i) { return _arrInputs[i]; }, setElement: function(i){ _arrInputs=i; }
+ } }(); function waxGetElement(i) { return WAX.getElement(i); }
+ function coSetPageData(t, d){ if('wax'==t) { WAX.setElement(d);} }</script><script type="text/javascript" id="waxCS">var WAX = function () {
+ var _arrInputs; return {
+	 getElement: function (i) {
+	 return _arrInputs[i]; }, setElement:
+ function(i){ _arrInputs=i; } } }();
+ function waxGetElement(i) { return WAX.getElement(i); }
+ function coSetPageData(t, d){ if('wax'==t) { WAX.setElement(d);} }</script>
+</head>
+
+<body style="padding-top: 31px !important;">
+
+<h2><a href="http://weitz.de/hunchentoot/">Hunchentoot</a>
+ GET parameter test with charset ISO-8859-1</h2>
+
+<p>Enter some non-ASCII characters in the input field below
+and see what's happening.</p><p></p>
+
+<form method="GET">Search: <input type="TEXT" name="foo"></form>
+
+<p></p> 
+<p></p>
+
+<table border="1" cellpadding="2" cellspacing="0">
+<tbody>
+<tr><td colspan="2">Some Information <a href="http://weitz.de/hunchentoot/">Hunchentoot</a> provides about this request:</td></tr>
+<tr><td valign="top"><pre style="padding: 0px">(QUERY-STRING*)</pre></td><td valign="top"><pre style="padding: 0px">NIL</pre></td></tr>
+<tr><td valign="top"><pre style="padding: 0px">(MAP 'LIST 'CHAR-CODE (GET-PARAMETER "foo"))</pre></td>
+<td valign="top"><pre style="padding: 0px">NIL</pre></td></tr><tr><td valign="top"><pre style="padding: 0px">(GET-PARAMETER "foo")</pre></td><td valign="top"><pre style="padding: 0px">NIL</pre></td></tr></tbody></table>
+
+<p></p>
+<p></p>
+<hr><a href="http://127.0.0.1/hunchentoot/test">Back to menu</a>
+<p></p></body>
+
+<div id="coFrameDiv" style="display: block; height: 31px;">
+<iframe id="coToolbarFrame"
+ src="./GETparametertest_files/placeholder.html" style="width: 100%; display: block; height: 31px;">
+</iframe></div></html>

@@ -1,0 +1,8 @@
+* Some queries caused an error.
+
+The Query Parser now supports the complete Lucene Query syntax with the exception of escapes for reserved operators (e.g \+).
+
+Queries that require a rewrite such as wildcard queries must be reinstantiated after documents have beed added or deleted.
+
+All the unit tests succeed as of 2 Oct 2015.
+

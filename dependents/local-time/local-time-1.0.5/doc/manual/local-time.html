@@ -1,0 +1,886 @@
+<html lang="en">
+<head>
+<title>The local-time Manual</title>
+<meta http-equiv="Content-Type" content="text/html">
+<meta name="description" content="The local-time Manual">
+<meta name="generator" content="makeinfo 4.13">
+<link title="Top" rel="top" href="#Top">
+<link href="http://www.gnu.org/software/texinfo/" rel="generator-home" title="Texinfo Homepage">
+<!--
+Copyright (C) 2012 Daniel Lowe <dlowe dlowe.net>
+
+Copyright (C) 2012 Attila Lendvai <attila.lendvai gmail.com>
+
+
+     This manual describes the `local-time' Common Lisp library which is
+     based on Erik Naggum's  _The Long, Painful History of Time_
+     [NaggumPaper] paper.
+
+-->
+<meta http-equiv="Content-Style-Type" content="text/css">
+<style type="text/css"><!--
+  pre.display { font-family:inherit }
+  pre.format  { font-family:inherit }
+  pre.smalldisplay { font-family:inherit; font-size:smaller }
+  pre.smallformat  { font-family:inherit; font-size:smaller }
+  pre.smallexample { font-size:smaller }
+  pre.smalllisp    { font-size:smaller }
+  span.sc    { font-variant:small-caps }
+  span.roman { font-family:serif; font-weight:normal; } 
+  span.sansserif { font-family:sans-serif; font-weight:normal; } 
+body {font-family: century schoolbook, serif;
+      line-height: 1.3;
+      padding-left: 5em; padding-right: 1em;
+      padding-bottom: 1em; max-width: 60em;}
+table {border-collapse: collapse}
+span.roman { font-family: century schoolbook, serif; font-weight: normal; }
+h1, h2, h3, h4, h5, h6 {font-family:  Helvetica, sans-serif}
+/*h4 {padding-top: 0.75em;}*/
+dfn {font-family: inherit; font-variant: italic; font-weight: bolder }
+kbd {font-family: monospace; text-decoration: underline}
+/*var {font-family: Helvetica, sans-serif; font-variant: slanted}*/
+var {font-variant: slanted;}
+td  {padding-right: 1em; padding-left: 1em}
+sub {font-size: smaller}
+.node {padding: 0; margin: 0}
+
+.lisp { font-family: monospace;
+        background-color: #F4F4F4; border: 1px solid #AAA;
+        padding-top: 0.5em; padding-bottom: 0.5em; }
+
+/* coloring */
+
+.lisp-bg { background-color: #F4F4F4 ; color: black; }
+.lisp-bg:hover { background-color: #F4F4F4 ; color: black; }
+
+.symbol { font-weight: bold; color: #770055; background-color : transparent; border: 0px; margin: 0px;}
+a.symbol:link { font-weight: bold; color : #229955; background-color : transparent; text-decoration: none; border: 0px; margin: 0px; }
+a.symbol:active { font-weight: bold; color : #229955; background-color : transparent; text-decoration: none; border: 0px; margin: 0px; }
+a.symbol:visited { font-weight: bold; color : #229955; background-color : transparent; text-decoration: none; border: 0px; margin: 0px; }
+a.symbol:hover { font-weight: bold; color : #229955; background-color : transparent; text-decoration: none; border: 0px; margin: 0px; }
+.special { font-weight: bold; color: #FF5000; background-color: inherit; }
+.keyword { font-weight: bold; color: #770000; background-color: inherit; }
+.comment { font-weight: normal; color: #007777; background-color: inherit; }
+.string  { font-weight: bold; color: #777777; background-color: inherit; }
+.character   { font-weight: bold; color: #0055AA; background-color: inherit; }
+.syntaxerror { font-weight: bold; color: #FF0000; background-color: inherit; }
+span.paren1 { font-weight: bold; color: #777777; }
+span.paren1:hover { color: #777777; background-color: #BAFFFF; }
+span.paren2 { color: #777777; }
+span.paren2:hover { color: #777777; background-color: #FFCACA; }
+span.paren3 { color: #777777; }
+span.paren3:hover { color: #777777; background-color: #FFFFBA; }
+span.paren4 { color: #777777; }
+span.paren4:hover { color: #777777; background-color: #CACAFF; }
+span.paren5 { color: #777777; }
+span.paren5:hover { color: #777777; background-color: #CAFFCA; }
+span.paren6 { color: #777777; }
+span.paren6:hover { color: #777777; background-color: #FFBAFF; }
+--></style>
+</head>
+<body>
+<h1 class="settitle">The local-time Manual</h1>
+<div class="contents">
+<h2>Table of Contents</h2>
+<ul>
+<li><a name="toc_Top" href="#Top"><code>local-time</code></a>
+<li><a name="toc_Introduction" href="#Introduction">1 Introduction</a>
+<li><a name="toc_Public-API" href="#Public-API">2 Public API</a>
+<ul>
+<li><a href="#Types">2.1 Types</a>
+<li><a href="#Timezones">2.2 Timezones</a>
+<li><a href="#Creating-timestamp-Objects">2.3 Creating <code>timestamp</code> Objects</a>
+<li><a href="#Querying-timestamp-Objects">2.4 Querying <code>timestamp</code> Objects</a>
+<li><a href="#Manipulating-Date-and-Time-Values">2.5 Manipulating Date and Time Values</a>
+<li><a href="#Parsing-and-Formatting">2.6 Parsing and Formatting</a>
+</li></ul>
+<li><a name="toc_Other-Features" href="#Other-Features">3 Other Features</a>
+<ul>
+<li><a href="#Other-Features">3.1 Reader Macros</a>
+<li><a href="#Other-Features">3.2 Support for non-Gregorian Calendars</a>
+</li></ul>
+<li><a name="toc_References" href="#References">4 References</a>
+<li><a name="toc_Comprehensive-Index" href="#Comprehensive-Index">Index</a>
+</li></ul>
+</div>
+
+
+
+<div class="node">
+<a name="Top"></a>
+<p><hr>
+Next:&nbsp;<a rel="next" accesskey="n" href="#Introduction">Introduction</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="#dir">(dir)</a>
+
+</div>
+
+<h2 class="unnumbered"><code>local-time</code></h2>
+
+<p>Copyright &copy; 2012 Daniel Lowe &lt;dlowe dlowe.net&gt; <br>
+Copyright &copy; 2012 Attila Lendvai &lt;attila.lendvai gmail.com&gt; <br>
+
+   <blockquote>
+This manual describes the <code>local-time</code> Common Lisp library which is
+based on Erik Naggum's  <em>The Long, Painful History of Time</em>
+[NaggumPaper] paper.
+
+   </blockquote>
+
+<ul class="menu">
+<li><a accesskey="1" href="#Introduction">Introduction</a>
+<li><a accesskey="2" href="#Public-API">Public API</a>
+<li><a accesskey="3" href="#Other-Features">Other Features</a>
+<li><a accesskey="4" href="#References">References</a>
+<li><a accesskey="5" href="#Comprehensive-Index">Comprehensive Index</a>
+</ul>
+
+<!-- =================================================================== -->
+<div class="node">
+<a name="Introduction"></a>
+<p><hr>
+Next:&nbsp;<a rel="next" accesskey="n" href="#Public-API">Public API</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="#Top">Top</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
+
+</div>
+
+<h2 class="chapter">1 Introduction</h2>
+
+<p>The <code>local-time</code> library is a Common Lisp library for the manipulation of
+dates, times and intervals. It was originally based almost entirely
+upon Erik Naggum's paper <em>The Long Painful History of Time</em>
+[NaggumPaper].  Many of the core concepts originated from this paper,
+such as the seperation of days and seconds, the choice of 2000-03-01
+as the standard epoch, and the timestring format.
+
+   <blockquote>
+<b>Caveats:</b> This implementation assumes that time zone information is stored in
+the tzfile format. The default timezone is loaded from
+/etc/localtime. On non-POSIX systems, this will certainly give
+different results than the system time handling. 
+</blockquote>
+
+<!-- =================================================================== -->
+<div class="node">
+<a name="Public-API"></a>
+<p><hr>
+Next:&nbsp;<a rel="next" accesskey="n" href="#Other-Features">Other Features</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="#Introduction">Introduction</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
+
+</div>
+
+<h2 class="chapter">2 Public API</h2>
+
+<ul class="menu">
+<li><a accesskey="1" href="#Types">Types</a>
+<li><a accesskey="2" href="#Timezones">Timezones</a>
+<li><a accesskey="3" href="#Creating-timestamp-Objects">Creating timestamp Objects</a>
+<li><a accesskey="4" href="#Querying-timestamp-Objects">Querying timestamp Objects</a>
+<li><a accesskey="5" href="#Manipulating-Date-and-Time-Values">Manipulating Date and Time Values</a>
+<li><a accesskey="6" href="#Parsing-and-Formatting">Parsing and Formatting</a>
+</ul>
+
+<!-- =================================================================== -->
+<div class="node">
+<a name="Types"></a>
+<p><hr>
+Next:&nbsp;<a rel="next" accesskey="n" href="#Timezones">Timezones</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="#Public-API">Public API</a>
+
+</div>
+
+<h3 class="section">2.1 Types</h3>
+
+<p>It's a good idea to treat all values as immutable objects. <code>local-time</code>
+will not modify any object it was given unless explicitly asked to by
+the <code>:into</code> keyword argument.
+
+   <p><a name="index-timestamp-1"></a>
+
+<div class="defun">
+&mdash; Class: <b>timestamp</b><var> day sec nsec<a name="index-timestamp-2"></a></var><br>
+<blockquote>
+        <p><code>timestamp</code> values can represent either a <em>date</em>,
+a <em>daytime</em> or a <em>time</em> value. It has the following slots:
+
+     <pre class="lisp">       (defclass timestamp ()
+         ((day :type integer)
+          (sec :type integer)
+          (nsec :type (integer 0 999999999))))
+</pre>
+        <p>The following constraints apply to the specific types:
+          <ul>
+<li><em>date</em>: must have a <var>+utc-zone+</var> timezone and the <var>sec</var>
+slot must be the first second of a day; In other words, the time
+elements of the <code>timestamp</code> value must have their least possible
+values.
+
+          <li><em>time</em>: the <var>day</var> slot must be zero.
+
+        </ul>
+        </p></blockquote></div>
+
+<div class="defun">
+&mdash; Struct: <b>timezone</b><var> path name loaded<a name="index-timezone-3"></a></var><br>
+<blockquote>
+        <p><code>timezone</code> objects represent timezones - local and political
+modifications to the time representation.  Timezones are responsible
+for storing offsets from GMT, abbreviations for different
+sub-timezones, and the times each sub-timezone is to be in effect.
+
+        </blockquote></div>
+
+<!-- =================================================================== -->
+<div class="node">
+<a name="Timezones"></a>
+<p><hr>
+Next:&nbsp;<a rel="next" accesskey="n" href="#Creating-timestamp-Objects">Creating timestamp Objects</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="#Types">Types</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="#Public-API">Public API</a>
+
+</div>
+
+<h3 class="section">2.2 Timezones</h3>
+
+<p><a name="index-g_t_002adefault_002dtimezone_002a-4"></a>
+
+<div class="defun">
+&mdash; Default: <b>*default-timezone*</b><var><a name="index-g_t_002adefault_002dtimezone_002a-5"></a></var><br>
+<blockquote>
+        <p>The variable <var>*default-timezone*</var> contains the timezone that will
+be used by default if none is specified.  It is loaded from
+<em>/etc/localtime</em> when the library is loaded.  If
+<em>/etc/localtime</em> is not present, it will default to UTC.
+
+        </blockquote></div>
+
+   <p><a name="index-g_t_002butc_002dtime_002b-6"></a>
+
+<div class="defun">
+&mdash; Constant: <b>+utc-time+</b><var><a name="index-g_t_002butc_002dtime_002b-7"></a></var><br>
+<blockquote>
+        <p>The variable <var>+utc-zone+</var> contains a timezone corresponding to
+UTC.
+
+        </blockquote></div>
+
+   <p><a name="index-define_002dtimezone-8"></a>
+
+<div class="defun">
+&mdash; Macro: <b>define-timezone</b><var> zone-name zone-file &amp;key </var>(<var>load nil</var>)<var><a name="index-define_002dtimezone-9"></a></var><br>
+<blockquote>
+        <p>Define <var>zone-name</var> (a symbol or a string) as a new timezone,
+lazy-loaded from <var>zone-file</var> (a pathname designator relative to
+the zoneinfo directory on this system.  If <var>load</var> is true, load
+immediately.
+
+        </blockquote></div>
+
+<!-- =================================================================== -->
+<div class="node">
+<a name="Creating-timestamp-Objects"></a>
+<p><hr>
+Next:&nbsp;<a rel="next" accesskey="n" href="#Querying-timestamp-Objects">Querying timestamp Objects</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="#Timezones">Timezones</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="#Public-API">Public API</a>
+
+</div>
+
+<h3 class="section">2.3 Creating <code>timestamp</code> Objects</h3>
+
+<p><a name="index-universal_002dto_002dtimestamp-10"></a>
+
+<div class="defun">
+&mdash; Function: <b>universal-to-timestamp</b><var> universal &amp;key </var>(<var>nsec 0</var>)<var><a name="index-universal_002dto_002dtimestamp-11"></a></var><br>
+<blockquote>
+        <p>Produces a <code>timestamp</code> instance from the provided universal time
+<var>universal</var>.  Universal time is defined in the Common Lisp
+Specification as the number of seconds since 1900-01-01T00:00:00Z. 
+</p></blockquote></div>
+
+   <p><a name="index-unix_002dto_002dtimestamp-12"></a>
+
+<div class="defun">
+&mdash; Function: <b>unix-to-timestamp</b><var> unix &amp;key </var>(<var>nsec 0</var>)<var><a name="index-unix_002dto_002dtimestamp-13"></a></var><br>
+<blockquote>
+        <p>Produces a <code>timestamp</code> instance from the provided unix time
+<var>unix</var>.  Unix time is defined by POSIX as the number of seconds
+since 1970-01-01T00:00:00Z. 
+</p></blockquote></div>
+
+   <p><a name="index-now-14"></a>
+
+<div class="defun">
+&mdash; Function: <b>now</b><var><a name="index-now-15"></a></var><br>
+<blockquote>
+        <p>Produces a <code>timestamp</code> instance with the current time.  Under
+sbcl, the new timestamp will be precise to the microsecond. 
+Otherwise, the precision is limited to the second. 
+</p></blockquote></div>
+
+   <p><a name="index-today-16"></a>
+
+<div class="defun">
+&mdash; Function: <b>today</b><var><a name="index-today-17"></a></var><br>
+<blockquote>
+        <p>Produces a <code>timestamp</code> instance that corresponds to today's
+date, which is the midnight of the current day in the UTC zone. 
+</p></blockquote></div>
+
+   <p><a name="index-encode_002dtimestamp-18"></a>
+
+<div class="defun">
+&mdash; Function: <b>encode-timestamp</b><var> nsec sec minute hour day month year &amp;key timezone offset into<a name="index-encode_002dtimestamp-19"></a></var><br>
+<blockquote>
+        <p>Returns a new <code>timestamp</code> instance corresponding to the specified
+time elements.  The <var>offset</var> is the number of seconds offset from
+UTC of the locale.  If <var>offset</var> is not specified, the offset will
+be guessed from the <var>timezone</var>.  If a <code>timestamp</code> is passed
+as the <var>into</var> argument, its value will be set and that
+<code>timestamp</code> will be returned.  Otherwise, a new <code>timestamp</code>
+is created. 
+</p></blockquote></div>
+
+   <p><a name="index-make_002dtimestamp-20"></a>
+
+<div class="defun">
+&mdash; Macro: <b>make-timestamp</b><var> &amp;key :day :sec :nsec<a name="index-make_002dtimestamp-21"></a></var><br>
+<blockquote>
+        <p>Expands to an expression that creates an instance of a
+<code>timestamp</code> exactly as specified. 
+</p></blockquote></div>
+
+   <p><a name="index-clone_002dtimestamp-22"></a>
+
+<div class="defun">
+&mdash; Macro: <b>clone-timestamp</b><var> timestamp<a name="index-clone_002dtimestamp-23"></a></var><br>
+<blockquote>
+        <p>Expands to an expression that creates another copy of <var>timestamp</var>
+that is <code>timestamp=</code> to it. 
+</p></blockquote></div>
+
+<!-- =================================================================== -->
+<div class="node">
+<a name="Querying-timestamp-Objects"></a>
+<p><hr>
+Next:&nbsp;<a rel="next" accesskey="n" href="#Manipulating-Date-and-Time-Values">Manipulating Date and Time Values</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="#Creating-timestamp-Objects">Creating timestamp Objects</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="#Public-API">Public API</a>
+
+</div>
+
+<h3 class="section">2.4 Querying <code>timestamp</code> Objects</h3>
+
+<p><a name="index-day_002dof-24"></a>
+
+<div class="defun">
+&mdash; Function: <b>day-of</b><var> timestamp<a name="index-day_002dof-25"></a></var><br>
+<blockquote>
+        <p>Returns the day component of <var>timestamp</var>.  Although Naggum's paper
+specifies that the day should be a signed fixnum, it is left unbounded
+for flexibility reasons. 
+</p></blockquote></div>
+
+   <p><a name="index-sec_002dof-26"></a>
+
+<div class="defun">
+&mdash; Function: <b>sec-of</b><var> timestamp<a name="index-sec_002dof-27"></a></var><br>
+<blockquote>
+        <p>Returns the 'seconds' component of the time.  Valid values for the
+seconds range from 0 to 86399. 
+</p></blockquote></div>
+
+   <p><a name="index-nsec_002dof-28"></a>
+
+<div class="defun">
+&mdash; Function: <b>nsec-of</b><var> timestamp<a name="index-nsec_002dof-29"></a></var><br>
+<blockquote>
+        <p>Returns the 'microseconds' component of the time.  Valid values for
+the nanoseconds range from 0 to 999999999. 
+</p></blockquote></div>
+
+   <p><a name="index-timestamp_002dto_002duniversal-30"></a>
+
+<div class="defun">
+&mdash; Function: <b>timestamp-to-universal</b><var> timestamp<a name="index-timestamp_002dto_002duniversal-31"></a></var><br>
+<blockquote>
+        <p>This returns the date/time specified in <var>timestamp</var> encoded as
+the number of seconds since January 1st, 1900 12:00am UTC. 
+</p></blockquote></div>
+
+   <p><a name="index-timestamp_002dto_002dunix-32"></a>
+
+<div class="defun">
+&mdash; Function: <b>timestamp-to-unix</b><var> timestamp<a name="index-timestamp_002dto_002dunix-33"></a></var><br>
+<blockquote>
+        <p>This returns the date/time specified in <var>timestamp</var> encoded as
+the number of seconds since January 1st, 1970 12:00am UTC.  It
+corresponds with the time received from the POSIX call <code>time()</code>. 
+</p></blockquote></div>
+
+   <p><a name="index-timestamp_002dsubtimezone-34"></a>
+
+<div class="defun">
+&mdash; Function: <b>timestamp-subtimezone</b><var> timestamp timezone<a name="index-timestamp_002dsubtimezone-35"></a></var><br>
+<blockquote>
+        <p>Returns as multiple values the time zone applicable at the given time
+as the number of seconds east of UTC, a boolean daylight-saving-p, and
+the customary abbreviation of the timezone. 
+</p></blockquote></div>
+
+   <p><a name="index-with_002ddecoded_002dtimestamp-36"></a>
+
+<div class="defun">
+&mdash; Macro: <b>with-decoded-timestamp</b> (<var>&amp;key nsec sec minute hour day month year day-of-week daylight-p timezone</var>)<var> timestamp &amp;body body<a name="index-with_002ddecoded_002dtimestamp-37"></a></var><br>
+<blockquote>
+        <p>This macro binds variables to the decoded elements of <var>timestamp</var>. 
+The timezone argument is used for decoding the timestamp, and is not
+bound by the macro. The value of <var>day-of-week</var> starts from 0 which
+means Sunday. 
+</p></blockquote></div>
+
+   <p><a name="index-decode_002dtimestamp-38"></a>
+
+<div class="defun">
+&mdash; Function: <b>decode-timestamp</b><var> timestamp<a name="index-decode_002dtimestamp-39"></a></var><br>
+<blockquote>
+        <p>Returns the decoded time as <code>(values ns ss mm hh day month
+year day-of-week daylight-saving-time-p timezone-offset timezone-abbreviation)</code>. 
+</p></blockquote></div>
+
+   <p><a name="index-timestamp_003c-40"></a><a name="index-timestamp_003c_003d-41"></a><a name="index-timestamp_003e-42"></a><a name="index-timestamp_003e_003d-43"></a><a name="index-timestamp_003d-44"></a><a name="index-timestamp_002f_003d-45"></a>
+
+<div class="defun">
+&mdash; Function: <b>timestamp&lt;</b><var> time-a time-b<a name="index-timestamp_003c-46"></a></var><br>
+&mdash; Function: <b>timestamp&lt;=</b><var> time-a time-b<a name="index-timestamp_003c_003d-47"></a></var><br>
+&mdash; Function: <b>timestamp&gt;</b><var> time-a time-b<a name="index-timestamp_003e-48"></a></var><br>
+&mdash; Function: <b>timestamp&gt;=</b><var> time-a time-b<a name="index-timestamp_003e_003d-49"></a></var><br>
+&mdash; Function: <b>timestamp=</b><var> time-a time-b<a name="index-timestamp_003d-50"></a></var><br>
+&mdash; Function: <b>timestamp/=</b><var> time-a time-b<a name="index-timestamp_002f_003d-51"></a></var><br>
+<blockquote>
+        <p>These comparison functions act like their string and char counterparts. 
+</p></blockquote></div>
+
+   <p><a name="index-timestamp_002dminimum-52"></a>
+
+<div class="defun">
+&mdash; Function: <b>timestamp-minimum</b><var> timestamp &amp;rest timestamps<a name="index-timestamp_002dminimum-53"></a></var><br>
+<blockquote>
+        <p>Returns the earliest timestamp passed to it. 
+</p></blockquote></div>
+
+   <p><a name="index-timestamp_002dmaximum-54"></a>
+
+<div class="defun">
+&mdash; Function: <b>timestamp-maximum</b><var> timestamp &amp;rest timestamps<a name="index-timestamp_002dmaximum-55"></a></var><br>
+<blockquote>
+        <p>Returns the latest timestamp passed to it. 
+</p></blockquote></div>
+
+   <p><a name="index-timestamp_002dday_002dof_002dweek-56"></a>
+
+<div class="defun">
+&mdash; Function: <b>timestamp-day-of-week</b><var> timestamp<a name="index-timestamp_002dday_002dof_002dweek-57"></a></var><br>
+<blockquote>
+        <p>This returns the index of the day of the week,
+starting at 0 which means Sunday. 
+<blockquote>
+<b>Note:</b> &rdquo;Day of the week&rdquo; is ambigous and locale dependent. 
+</blockquote>
+        </p></blockquote></div>
+
+   <p><a name="index-universal_002dto_002dtimestamp-58"></a>
+
+<div class="defun">
+&mdash; Function: <b>universal-to-timestamp</b><var> timestamp<a name="index-universal_002dto_002dtimestamp-59"></a></var><br>
+<blockquote>
+        <p>Returns the UNIVERSAL-TIME corresponding to <var>timestamp</var>. 
+<blockquote>
+<b>Note:</b> Subsecond precision is not preserved. 
+</blockquote>
+        </p></blockquote></div>
+
+   <p><a name="index-timestamp_002dmillennium-60"></a><a name="index-timestamp_002dcentury-61"></a><a name="index-timestamp_002ddecade-62"></a>
+
+<div class="defun">
+&mdash; Function: <b>timestamp-millennium</b><var> timestamp &amp;key timezone<a name="index-timestamp_002dmillennium-63"></a></var><br>
+&mdash; Function: <b>timestamp-century</b><var> timestamp &amp;key timezone<a name="index-timestamp_002dcentury-64"></a></var><br>
+&mdash; Function: <b>timestamp-decade</b><var> timestamp &amp;key timezone<a name="index-timestamp_002ddecade-65"></a></var><br>
+<blockquote>
+        <p>Returns the ordinal millennium, century or decade upon which the
+timestamp falls.  Ordinal time values start at 1, so the
+(timestamp-century (now)) will return 21.
+
+        </blockquote></div>
+
+   <p><a name="index-timestamp_002dyear-66"></a><a name="index-timestamp_002dmonth-67"></a><a name="index-timestamp_002dday-68"></a><a name="index-timestamp_002dhour-69"></a><a name="index-timestamp_002dminute-70"></a><a name="index-timestamp_002dsecond-71"></a><a name="index-timestamp_002dmillisecond-72"></a><a name="index-timestamp_002dmicrosecond-73"></a>
+
+<div class="defun">
+&mdash; Function: <b>timestamp-year</b><var> timestamp &amp;key timezone<a name="index-timestamp_002dyear-74"></a></var><br>
+&mdash; Function: <b>timestamp-month</b><var> timestamp &amp;key timezone<a name="index-timestamp_002dmonth-75"></a></var><br>
+&mdash; Function: <b>timestamp-day</b><var> timestamp &amp;key timezone<a name="index-timestamp_002dday-76"></a></var><br>
+&mdash; Function: <b>timestamp-hour</b><var> timestamp &amp;key timezone<a name="index-timestamp_002dhour-77"></a></var><br>
+&mdash; Function: <b>timestamp-minute</b><var> timestamp &amp;key timezone<a name="index-timestamp_002dminute-78"></a></var><br>
+&mdash; Function: <b>timestamp-second</b><var> timestamp &amp;key timezone<a name="index-timestamp_002dsecond-79"></a></var><br>
+&mdash; Function: <b>timestamp-millisecond</b><var> timestamp &amp;key timezone<a name="index-timestamp_002dmillisecond-80"></a></var><br>
+&mdash; Function: <b>timestamp-microsecond</b><var> timestamp &amp;key timezone<a name="index-timestamp_002dmicrosecond-81"></a></var><br>
+&mdash; Function: <b>timestamp-microsecond</b><var> timestamp &amp;key timezone<a name="index-timestamp_002dmicrosecond-82"></a></var><br>
+<blockquote>
+        <p>Returns the decoded part of the timestamp. 
+</p></blockquote></div>
+
+<!-- =================================================================== -->
+<div class="node">
+<a name="Manipulating-Date-and-Time-Values"></a>
+<p><hr>
+Next:&nbsp;<a rel="next" accesskey="n" href="#Parsing-and-Formatting">Parsing and Formatting</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="#Querying-timestamp-Objects">Querying timestamp Objects</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="#Public-API">Public API</a>
+
+</div>
+
+<h3 class="section">2.5 Manipulating Date and Time Values</h3>
+
+<p><a name="index-timestamp_002b-83"></a><a name="index-timestamp_002d-84"></a>
+
+<div class="defun">
+&mdash; Function: <b>timestamp+</b><var> time amount unit<a name="index-timestamp_002b-85"></a></var><br>
+&mdash; Function: <b>timestamp-</b><var> time amount unit<a name="index-timestamp_002d-86"></a></var><br>
+<blockquote>
+        <p>Add or subtract the <var>amount</var> to the <var>time</var> using the specified
+<var>unit</var>.  <var>unit</var> may be one of ( <code>:nsec</code> <code>:sec</code>
+<code>:minute</code> <code>:hour</code> <code>:day</code> <code>:month</code> <code>:year</code>). 
+The value of the parts of the timestamp of higher resolution than the
+UNIT will never be touched.  If you want a precise number of seconds
+from a time, you should specify the offset in seconds. 
+</p></blockquote></div>
+
+   <p><a name="index-timestamp_002dmaximize_002dpart-87"></a>
+
+<div class="defun">
+&mdash; Function: <b>timestamp-maximize-part</b><var> timestamp part &amp;key offset timezone into<a name="index-timestamp_002dmaximize_002dpart-88"></a></var><br>
+<blockquote>
+        <p>Returns a timestamp with its parts maximized up to <var>part</var>.  <var>part</var> can be
+any of (:nsec :sec :min :hour :day :month).  If <var>into</var> is specified, it
+will be modified and returned, otherwise a new timestamp will be
+created. 
+</p></blockquote></div>
+
+   <p><a name="index-timestamp_002dminimize_002dpart-89"></a>
+
+<div class="defun">
+&mdash; Function: <b>timestamp-minimize-part</b><var> timestamp part &amp;key offset timezone into<a name="index-timestamp_002dminimize_002dpart-90"></a></var><br>
+<blockquote>
+        <p>Returns a timestamp with its parts minimized up to <var>part</var>.  <var>part</var> can be
+any of (:nsec :sec :min :hour :day :month).  If <var>into</var> is specified, it
+will be modified and returned, otherwise a new timestamp will be
+created. 
+</p></blockquote></div>
+
+   <p><a name="index-adjust_002dtimestamp-91"></a>
+
+<div class="defun">
+&mdash; Macro: <b>adjust-timestamp</b><var> timestamp &amp;body changes<a name="index-adjust_002dtimestamp-92"></a></var><br>
+<blockquote>
+        <p>Alters various parts of <var>timestamp</var>, given a list of changes.  The
+changes are in the format <code>(offset part value)</code> and <code>(set
+part value)</code>.
+
+     <pre class="lisp">       ;; Return a new <code>timestamp</code> value that points to the previous Monday
+       (adjust-timestamp (today) (offset :day-of-week :monday))
+       
+       ;; Return a new <code>timestamp</code> value that points three days ahead from now
+       (adjust-timestamp (today) (offset :day 3))
+</pre>
+        <p>Keep in mind that <code>adjust-timestamp</code> is not a mere setter for
+fields but instead it handles overflows and timezone conversions as
+expected. Also note that it's possible to specify multiple commands.
+
+        <p>The list of possible places to manipulate are: <code>:nsec</code>
+<code>:sec</code> <code>:sec-of-day</code> <code>:minute</code> <code>:hour</code>
+<code>:day</code> <code>:day-of-month</code> <code>:month</code> <code>:year</code>. 
+</p></blockquote></div>
+
+   <p><a name="index-adjust_002dtimestamp_0021-93"></a>
+
+<div class="defun">
+&mdash; Macro: <b>adjust-timestamp!</b><var> timestamp &amp;body changes<a name="index-adjust_002dtimestamp_0021-94"></a></var><br>
+<blockquote>
+        <p>Just like <code>adjust-timestamp</code>, but instead of returning a freshly
+constructed value, it alters the provided <var>timestamp</var> value (and
+returns it). 
+</p></blockquote></div>
+
+   <p><a name="index-timestamp_002dwhole_002dyear_002ddifference-95"></a>
+
+<div class="defun">
+&mdash; Function: <b>timestamp-whole-year-difference</b><var> time-a time-b<a name="index-timestamp_002dwhole_002dyear_002ddifference-96"></a></var><br>
+<blockquote>
+        <p>Returns the number of whole years elapsed between <var>time-a</var> and <var>time-b</var>. 
+<blockquote>
+<b>Note:</b> This is useful for calculating anniversaries and birthdays. 
+</blockquote>
+        </p></blockquote></div>
+
+   <p><a name="index-days_002din_002dmonth-97"></a>
+
+<div class="defun">
+&mdash; Function: <b>days-in-month</b><var> month year<a name="index-days_002din_002dmonth-98"></a></var><br>
+<blockquote>
+        <p>Returns the number of days in a given month of the specified year. 
+</p></blockquote></div>
+
+<!-- =================================================================== -->
+<div class="node">
+<a name="Parsing-and-Formatting"></a>
+<p><hr>
+Previous:&nbsp;<a rel="previous" accesskey="p" href="#Manipulating-Date-and-Time-Values">Manipulating Date and Time Values</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="#Public-API">Public API</a>
+
+</div>
+
+<h3 class="section">2.6 Parsing and Formatting</h3>
+
+<p><a name="index-g_t_002biso_002d8601_002dformat_002b-99"></a>
+
+<div class="defun">
+&mdash; Constant: <b>+iso-8601-format+</b><var><a name="index-g_t_002biso_002d8601_002dformat_002b-100"></a></var><br>
+<blockquote>
+        <p>The constant <var>+iso-8601-format+</var> is bound to a description of the ISO 8601 format.  An output with this format will look like this: &lsquo;<samp><span class="samp">2008-03-01T19:42:34.608506+01:00</span></samp>&rsquo;.  This is the default format for the <code>format-timestring</code> function.
+
+        </blockquote></div>
+
+   <p><a name="index-g_t_002basctime_002dformat_002b-101"></a>
+
+<div class="defun">
+&mdash; Constant: <b>+asctime-format+</b><var><a name="index-g_t_002basctime_002dformat_002b-102"></a></var><br>
+<blockquote>
+        <p>The constant <var>+asctime-format+</var> is bound to a format mirroring the output of the POSIX asctime() function.  An output with this format will look like this: &lsquo;<samp><span class="samp">Sat Mar  1 19:42:34 2008</span></samp>&rsquo;.
+
+        </blockquote></div>
+
+   <p><a name="index-g_t_002brfc_002d1123_002dformat_002b-103"></a>
+
+<div class="defun">
+&mdash; Constant: <b>+rfc-1123-format+</b><var><a name="index-g_t_002brfc_002d1123_002dformat_002b-104"></a></var><br>
+<blockquote>
+        <p>The constant <var>+rfc-1123-format+</var> is bound to a description of the format defined in RFC 1123 for Internet timestamps.  An output with this format will look like this: &lsquo;<samp><span class="samp">Sat, 01 Mar 2008 19:42:34 EDT</span></samp>&rsquo;.
+
+        </blockquote></div>
+
+   <p><a name="index-g_t_002biso_002dweek_002ddate_002dformat_002b-105"></a>
+
+<div class="defun">
+&mdash; Constant: <b>+iso-week-date-format+</b><var><a name="index-g_t_002biso_002dweek_002ddate_002dformat_002b-106"></a></var><br>
+<blockquote>
+        <p>The constant <var>+iso-week-date-format+</var> is bound to a description of the ISO 8601 Week Date format.  An output with this format will look like this: &lsquo;<samp><span class="samp">2009-W53-5</span></samp>&rsquo;.
+
+        </blockquote></div>
+
+   <p><a name="index-parse_002dtimestring-107"></a>
+
+<div class="defun">
+&mdash; Function: <b>parse-timestring</b><var> timestring &amp;key </var>(<var>start 0</var>)<var> end </var>(<var>fail-on-error t</var>) (<var>offset 0</var>)<var><a name="index-parse_002dtimestring-108"></a></var><br>
+<blockquote>
+        <p>Parses a timestring and returns the corresponding <code>timestamp</code>. 
+Parsing begins at <var>start</var> and stops at the <var>end</var>
+position. If there are invalid characters within <code>timestring</code>
+and <var>fail-on-error</var> is <code>T</code>, then an <code>invalid-timestring</code>
+error is signaled, otherwise <code>NIL</code> is returned.
+
+        <p>If there is no timezone specified in <code>timestring</code> then
+<var>offset</var> is used as the default timezone offset (in seconds). 
+</p></blockquote></div>
+
+   <p><a name="index-format_002dtimestring-109"></a>
+
+<div class="defun">
+&mdash; Function: <b>format-timestring</b> (<var>destination timestamp &amp;key </var>(<var>format +iso-8601-format+</var>) (<var>timezone *default-timezone*</var>))<var><a name="index-format_002dtimestring-110"></a></var><br>
+<blockquote>
+        <p>Constructs a string representation of TIMESTAMP according to FORMAT and returns it.  If destination is T, the string is written to *standard-output*.  If destination is a stream, the string is written to the stream.
+
+        <p>FORMAT is a list containing one or more of strings, characters, and keywords.  Strings and characters are output literally, while keywords are replaced by the values here:
+
+          <dl>
+<dt><code>:year</code><dd>*year
+<br><dt><code>:month</code><dd>*numeric month
+<br><dt><code>:day</code><dd>*day of month
+<br><dt><code>:weekday</code><dd>*numeric day of week, starting from 0 which means Sunday
+<br><dt><code>:hour</code><dd>*hour
+<br><dt><code>:min</code><dd>*minutes
+<br><dt><code>:sec</code><dd>*seconds
+<br><dt><code>:msec</code><dd>*milliseconds
+<br><dt><code>:usec</code><dd>*microseconds
+<br><dt><code>:nsec</code><dd>*nanoseconds
+<br><dt><code>:iso-week-year</code><dd>*year for ISO week date (can be different from regular calendar year)
+<br><dt><code>:iso-week-number</code><dd>*ISO week number (i.e. 1 through 53)
+<br><dt><code>:iso-week-day</code><dd>*ISO compatible weekday number (i.e. monday=1, sunday=7)
+<br><dt><code>:ordinal-day</code><dd>day of month as an ordinal (e.g. 1st, 23rd)
+<br><dt><code>:long-weekday</code><dd>long form of weekday (e.g. Sunday, Monday)
+<br><dt><code>:short-weekday</code><dd>short form of weekday (e.g. Sun, Mon)
+<br><dt><code>:long-month</code><dd>long form of month (e.g. January, February)
+<br><dt><code>:short-month</code><dd>short form of month (e.g. Jan, Feb)
+<br><dt><code>:hour12</code><dd>hour on a 12-hour clock
+<br><dt><code>:ampm</code><dd>am/pm marker in lowercase
+<br><dt><code>:gmt-offset</code><dd>the gmt-offset of the time, in +00:00 form
+<br><dt><code>:gmt-offset-or-z</code><dd>like :gmt-offset, but is Z when UTC
+<br><dt><code>:timezone</code><dd>timezone abbrevation for the time
+</dl>
+
+        <p>Elements marked by * can be placed in a list in the form:
+     <pre class="lisp">       (:keyword padding &amp;optional (padchar #\0))
+</pre>
+        <p>The string representation of the value will be padded with the padchar.
+
+        <p>You can see examples by examining the values in <var>+iso-8601-format+</var>, <var>+asctime-format+</var>, and <var>+rfc-1123-format+</var>.
+
+        <p>Produces on <var>stream</var> the timestring corresponding to the <var>timestamp</var> with
+the given options.  If <var>stream</var> is <code>nil</code>, only returns a string containing what
+would have been the output.  If <var>stream</var> is <code>t</code>, prints the string to
+<var>*standard-output*</var>.
+
+        <p>Example output:
+     <pre class="lisp">       LOCAL-TIME&gt; (format-timestring nil (now))
+       "2008-03-01T19:42:34.608506+01:00"
+</pre>
+        </blockquote></div>
+
+   <p><a name="index-format_002drfc3339_002dtimestring-111"></a>
+
+<div class="defun">
+&mdash; Function: <b>format-rfc3339-timestring</b> (<var>destination timestamp &amp;key omit-date-part omit-time-part omit-timezone-part </var>(<var>use-zulu t</var>))<var><a name="index-format_002drfc3339_002dtimestring-112"></a></var><br>
+<blockquote>
+        <p>Formats the time like format-timestring, but in RFC 3339 format. The options control valid options in the RFC. 
+</p></blockquote></div>
+
+<!-- =================================================================== -->
+<div class="node">
+<a name="Other-Features"></a>
+<p><hr>
+Next:&nbsp;<a rel="next" accesskey="n" href="#References">References</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="#Public-API">Public API</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
+
+</div>
+
+<h2 class="chapter">3 Other Features</h2>
+
+<h3 class="section">3.1 Reader Macros</h3>
+
+<p><a name="index-enable_002dread_002dmacros-113"></a>
+
+<div class="defun">
+&mdash; Function: <b>enable-read-macros</b><var><a name="index-enable_002dread_002dmacros-114"></a></var><br>
+<blockquote>
+        <p>Adds @TIMESTRING and #@UNIVERSAL-TIME as reader macros. 
+</p></blockquote></div>
+
+<h3 class="section">3.2 Support for non-Gregorian Calendars</h3>
+
+<p><a name="index-astronomical_002djulian_002ddate-115"></a>
+
+<div class="defun">
+&mdash; Function: <b>astronomical-julian-date</b><var> timestamp<a name="index-astronomical_002djulian_002ddate-116"></a></var><br>
+<blockquote>
+        <p>Returns the julian date of the date portion of <var>timestamp</var>. 
+</p></blockquote></div>
+
+   <p><a name="index-modified_002djulian_002ddate-117"></a>
+
+<div class="defun">
+&mdash; Function: <b>astronomical-julian-date</b><var> timestamp<a name="index-astronomical_002djulian_002ddate-118"></a></var><br>
+<blockquote>
+        <p>Returns the modified julian date of the date portion of <var>timestamp</var>. 
+</p></blockquote></div>
+
+<!-- =================================================================== -->
+<div class="node">
+<a name="References"></a>
+<p><hr>
+Next:&nbsp;<a rel="next" accesskey="n" href="#Comprehensive-Index">Comprehensive Index</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="#Other-Features">Other Features</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
+
+</div>
+
+<h2 class="chapter">4 References</h2>
+
+     <ul>
+<li>[NaggumPaper] Erik Naggum. <em>The Long Painful History of Time</em>
+<a href="http://naggum.no/lugm-time.html">http://naggum.no/lugm-time.html</a>, 1999.
+
+</ul>
+
+<!-- =================================================================== -->
+<div class="node">
+<a name="Comprehensive-Index"></a>
+<p><hr>
+Previous:&nbsp;<a rel="previous" accesskey="p" href="#References">References</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
+
+</div>
+
+<h2 class="unnumbered">Index</h2>
+
+<ul class="index-cp" compact>
+<li><a href="#index-g_t_002adefault_002dtimezone_002a-4">*default-timezone*</a>: <a href="#Timezones">Timezones</a></li>
+<li><a href="#index-g_t_002basctime_002dformat_002b-101">+asctime-format+</a>: <a href="#Parsing-and-Formatting">Parsing and Formatting</a></li>
+<li><a href="#index-g_t_002biso_002d8601_002dformat_002b-99">+iso-8601-format+</a>: <a href="#Parsing-and-Formatting">Parsing and Formatting</a></li>
+<li><a href="#index-g_t_002biso_002dweek_002ddate_002dformat_002b-105">+iso-week-date-format+</a>: <a href="#Parsing-and-Formatting">Parsing and Formatting</a></li>
+<li><a href="#index-g_t_002brfc_002d1123_002dformat_002b-103">+rfc-1123-format+</a>: <a href="#Parsing-and-Formatting">Parsing and Formatting</a></li>
+<li><a href="#index-g_t_002butc_002dtime_002b-6">+utc-time+</a>: <a href="#Timezones">Timezones</a></li>
+<li><a href="#index-adjust_002dtimestamp-91">adjust-timestamp</a>: <a href="#Manipulating-Date-and-Time-Values">Manipulating Date and Time Values</a></li>
+<li><a href="#index-adjust_002dtimestamp_0021-93">adjust-timestamp!</a>: <a href="#Manipulating-Date-and-Time-Values">Manipulating Date and Time Values</a></li>
+<li><a href="#index-astronomical_002djulian_002ddate-115">astronomical-julian-date</a>: <a href="#Other-Features">Other Features</a></li>
+<li><a href="#index-clone_002dtimestamp-22">clone-timestamp</a>: <a href="#Creating-timestamp-Objects">Creating timestamp Objects</a></li>
+<li><a href="#index-day_002dof-24">day-of</a>: <a href="#Querying-timestamp-Objects">Querying timestamp Objects</a></li>
+<li><a href="#index-days_002din_002dmonth-97">days-in-month</a>: <a href="#Manipulating-Date-and-Time-Values">Manipulating Date and Time Values</a></li>
+<li><a href="#index-decode_002dtimestamp-38">decode-timestamp</a>: <a href="#Querying-timestamp-Objects">Querying timestamp Objects</a></li>
+<li><a href="#index-define_002dtimezone-8">define-timezone</a>: <a href="#Timezones">Timezones</a></li>
+<li><a href="#index-enable_002dread_002dmacros-113">enable-read-macros</a>: <a href="#Other-Features">Other Features</a></li>
+<li><a href="#index-encode_002dtimestamp-18">encode-timestamp</a>: <a href="#Creating-timestamp-Objects">Creating timestamp Objects</a></li>
+<li><a href="#index-format_002drfc3339_002dtimestring-111">format-rfc3339-timestring</a>: <a href="#Parsing-and-Formatting">Parsing and Formatting</a></li>
+<li><a href="#index-format_002dtimestring-109">format-timestring</a>: <a href="#Parsing-and-Formatting">Parsing and Formatting</a></li>
+<li><a href="#index-make_002dtimestamp-20">make-timestamp</a>: <a href="#Creating-timestamp-Objects">Creating timestamp Objects</a></li>
+<li><a href="#index-modified_002djulian_002ddate-117">modified-julian-date</a>: <a href="#Other-Features">Other Features</a></li>
+<li><a href="#index-now-14">now</a>: <a href="#Creating-timestamp-Objects">Creating timestamp Objects</a></li>
+<li><a href="#index-nsec_002dof-28">nsec-of</a>: <a href="#Querying-timestamp-Objects">Querying timestamp Objects</a></li>
+<li><a href="#index-parse_002dtimestring-107">parse-timestring</a>: <a href="#Parsing-and-Formatting">Parsing and Formatting</a></li>
+<li><a href="#index-sec_002dof-26">sec-of</a>: <a href="#Querying-timestamp-Objects">Querying timestamp Objects</a></li>
+<li><a href="#index-timestamp-1">timestamp</a>: <a href="#Types">Types</a></li>
+<li><a href="#index-timestamp_002b-83">timestamp+</a>: <a href="#Manipulating-Date-and-Time-Values">Manipulating Date and Time Values</a></li>
+<li><a href="#index-timestamp_002d-84">timestamp-</a>: <a href="#Manipulating-Date-and-Time-Values">Manipulating Date and Time Values</a></li>
+<li><a href="#index-timestamp_002dcentury-61">timestamp-century</a>: <a href="#Querying-timestamp-Objects">Querying timestamp Objects</a></li>
+<li><a href="#index-timestamp_002dday-68">timestamp-day</a>: <a href="#Querying-timestamp-Objects">Querying timestamp Objects</a></li>
+<li><a href="#index-timestamp_002dday_002dof_002dweek-56">timestamp-day-of-week</a>: <a href="#Querying-timestamp-Objects">Querying timestamp Objects</a></li>
+<li><a href="#index-timestamp_002ddecade-62">timestamp-decade</a>: <a href="#Querying-timestamp-Objects">Querying timestamp Objects</a></li>
+<li><a href="#index-timestamp_002dhour-69">timestamp-hour</a>: <a href="#Querying-timestamp-Objects">Querying timestamp Objects</a></li>
+<li><a href="#index-timestamp_002dmaximize_002dpart-87">timestamp-maximize-part</a>: <a href="#Manipulating-Date-and-Time-Values">Manipulating Date and Time Values</a></li>
+<li><a href="#index-timestamp_002dmaximum-54">timestamp-maximum</a>: <a href="#Querying-timestamp-Objects">Querying timestamp Objects</a></li>
+<li><a href="#index-timestamp_002dmicrosecond-73">timestamp-microsecond</a>: <a href="#Querying-timestamp-Objects">Querying timestamp Objects</a></li>
+<li><a href="#index-timestamp_002dmillennium-60">timestamp-millennium</a>: <a href="#Querying-timestamp-Objects">Querying timestamp Objects</a></li>
+<li><a href="#index-timestamp_002dmillisecond-72">timestamp-millisecond</a>: <a href="#Querying-timestamp-Objects">Querying timestamp Objects</a></li>
+<li><a href="#index-timestamp_002dminimize_002dpart-89">timestamp-minimize-part</a>: <a href="#Manipulating-Date-and-Time-Values">Manipulating Date and Time Values</a></li>
+<li><a href="#index-timestamp_002dminimum-52">timestamp-minimum</a>: <a href="#Querying-timestamp-Objects">Querying timestamp Objects</a></li>
+<li><a href="#index-timestamp_002dminute-70">timestamp-minute</a>: <a href="#Querying-timestamp-Objects">Querying timestamp Objects</a></li>
+<li><a href="#index-timestamp_002dmonth-67">timestamp-month</a>: <a href="#Querying-timestamp-Objects">Querying timestamp Objects</a></li>
+<li><a href="#index-timestamp_002dsecond-71">timestamp-second</a>: <a href="#Querying-timestamp-Objects">Querying timestamp Objects</a></li>
+<li><a href="#index-timestamp_002dsubtimezone-34">timestamp-subtimezone</a>: <a href="#Querying-timestamp-Objects">Querying timestamp Objects</a></li>
+<li><a href="#index-timestamp_002dto_002duniversal-30">timestamp-to-universal</a>: <a href="#Querying-timestamp-Objects">Querying timestamp Objects</a></li>
+<li><a href="#index-timestamp_002dto_002dunix-32">timestamp-to-unix</a>: <a href="#Querying-timestamp-Objects">Querying timestamp Objects</a></li>
+<li><a href="#index-timestamp_002dwhole_002dyear_002ddifference-95">timestamp-whole-year-difference</a>: <a href="#Manipulating-Date-and-Time-Values">Manipulating Date and Time Values</a></li>
+<li><a href="#index-timestamp_002dyear-66">timestamp-year</a>: <a href="#Querying-timestamp-Objects">Querying timestamp Objects</a></li>
+<li><a href="#index-timestamp_002f_003d-45">timestamp/=</a>: <a href="#Querying-timestamp-Objects">Querying timestamp Objects</a></li>
+<li><a href="#index-timestamp_003c-40">timestamp&lt;</a>: <a href="#Querying-timestamp-Objects">Querying timestamp Objects</a></li>
+<li><a href="#index-timestamp_003c_003d-41">timestamp&lt;=</a>: <a href="#Querying-timestamp-Objects">Querying timestamp Objects</a></li>
+<li><a href="#index-timestamp_003d-44">timestamp=</a>: <a href="#Querying-timestamp-Objects">Querying timestamp Objects</a></li>
+<li><a href="#index-timestamp_003e-42">timestamp&gt;</a>: <a href="#Querying-timestamp-Objects">Querying timestamp Objects</a></li>
+<li><a href="#index-timestamp_003e_003d-43">timestamp&gt;=</a>: <a href="#Querying-timestamp-Objects">Querying timestamp Objects</a></li>
+<li><a href="#index-today-16">today</a>: <a href="#Creating-timestamp-Objects">Creating timestamp Objects</a></li>
+<li><a href="#index-universal_002dto_002dtimestamp-58">universal-to-timestamp</a>: <a href="#Querying-timestamp-Objects">Querying timestamp Objects</a></li>
+<li><a href="#index-universal_002dto_002dtimestamp-10">universal-to-timestamp</a>: <a href="#Creating-timestamp-Objects">Creating timestamp Objects</a></li>
+<li><a href="#index-unix_002dto_002dtimestamp-12">unix-to-timestamp</a>: <a href="#Creating-timestamp-Objects">Creating timestamp Objects</a></li>
+<li><a href="#index-with_002ddecoded_002dtimestamp-36">with-decoded-timestamp</a>: <a href="#Querying-timestamp-Objects">Querying timestamp Objects</a></li>
+   </ul></body></html>
+

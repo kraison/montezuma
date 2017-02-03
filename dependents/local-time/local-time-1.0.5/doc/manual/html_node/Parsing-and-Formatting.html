@@ -1,0 +1,208 @@
+<html lang="en">
+<head>
+<title>Parsing and Formatting - The local-time Manual</title>
+<meta http-equiv="Content-Type" content="text/html">
+<meta name="description" content="The local-time Manual">
+<meta name="generator" content="makeinfo 4.13">
+<link title="Top" rel="start" href="index.html#Top">
+<link rel="up" href="Public-API.html#Public-API" title="Public API">
+<link rel="prev" href="Manipulating-Date-and-Time-Values.html#Manipulating-Date-and-Time-Values" title="Manipulating Date and Time Values">
+<link href="http://www.gnu.org/software/texinfo/" rel="generator-home" title="Texinfo Homepage">
+<!--
+Copyright (C) 2012 Daniel Lowe <dlowe dlowe.net>
+
+Copyright (C) 2012 Attila Lendvai <attila.lendvai gmail.com>
+
+
+     This manual describes the `local-time' Common Lisp library which is
+     based on Erik Naggum's  _The Long, Painful History of Time_
+     [NaggumPaper] paper.
+
+-->
+<meta http-equiv="Content-Style-Type" content="text/css">
+<style type="text/css"><!--
+  pre.display { font-family:inherit }
+  pre.format  { font-family:inherit }
+  pre.smalldisplay { font-family:inherit; font-size:smaller }
+  pre.smallformat  { font-family:inherit; font-size:smaller }
+  pre.smallexample { font-size:smaller }
+  pre.smalllisp    { font-size:smaller }
+  span.sc    { font-variant:small-caps }
+  span.roman { font-family:serif; font-weight:normal; } 
+  span.sansserif { font-family:sans-serif; font-weight:normal; } 
+body {font-family: century schoolbook, serif;
+      line-height: 1.3;
+      padding-left: 5em; padding-right: 1em;
+      padding-bottom: 1em; max-width: 60em;}
+table {border-collapse: collapse}
+span.roman { font-family: century schoolbook, serif; font-weight: normal; }
+h1, h2, h3, h4, h5, h6 {font-family:  Helvetica, sans-serif}
+/*h4 {padding-top: 0.75em;}*/
+dfn {font-family: inherit; font-variant: italic; font-weight: bolder }
+kbd {font-family: monospace; text-decoration: underline}
+/*var {font-family: Helvetica, sans-serif; font-variant: slanted}*/
+var {font-variant: slanted;}
+td  {padding-right: 1em; padding-left: 1em}
+sub {font-size: smaller}
+.node {padding: 0; margin: 0}
+
+.lisp { font-family: monospace;
+        background-color: #F4F4F4; border: 1px solid #AAA;
+        padding-top: 0.5em; padding-bottom: 0.5em; }
+
+/* coloring */
+
+.lisp-bg { background-color: #F4F4F4 ; color: black; }
+.lisp-bg:hover { background-color: #F4F4F4 ; color: black; }
+
+.symbol { font-weight: bold; color: #770055; background-color : transparent; border: 0px; margin: 0px;}
+a.symbol:link { font-weight: bold; color : #229955; background-color : transparent; text-decoration: none; border: 0px; margin: 0px; }
+a.symbol:active { font-weight: bold; color : #229955; background-color : transparent; text-decoration: none; border: 0px; margin: 0px; }
+a.symbol:visited { font-weight: bold; color : #229955; background-color : transparent; text-decoration: none; border: 0px; margin: 0px; }
+a.symbol:hover { font-weight: bold; color : #229955; background-color : transparent; text-decoration: none; border: 0px; margin: 0px; }
+.special { font-weight: bold; color: #FF5000; background-color: inherit; }
+.keyword { font-weight: bold; color: #770000; background-color: inherit; }
+.comment { font-weight: normal; color: #007777; background-color: inherit; }
+.string  { font-weight: bold; color: #777777; background-color: inherit; }
+.character   { font-weight: bold; color: #0055AA; background-color: inherit; }
+.syntaxerror { font-weight: bold; color: #FF0000; background-color: inherit; }
+span.paren1 { font-weight: bold; color: #777777; }
+span.paren1:hover { color: #777777; background-color: #BAFFFF; }
+span.paren2 { color: #777777; }
+span.paren2:hover { color: #777777; background-color: #FFCACA; }
+span.paren3 { color: #777777; }
+span.paren3:hover { color: #777777; background-color: #FFFFBA; }
+span.paren4 { color: #777777; }
+span.paren4:hover { color: #777777; background-color: #CACAFF; }
+span.paren5 { color: #777777; }
+span.paren5:hover { color: #777777; background-color: #CAFFCA; }
+span.paren6 { color: #777777; }
+span.paren6:hover { color: #777777; background-color: #FFBAFF; }
+--></style>
+</head>
+<body>
+<div class="node">
+<a name="Parsing-and-Formatting"></a>
+<p>
+Previous:&nbsp;<a rel="previous" accesskey="p" href="Manipulating-Date-and-Time-Values.html#Manipulating-Date-and-Time-Values">Manipulating Date and Time Values</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="Public-API.html#Public-API">Public API</a>
+<hr>
+</div>
+
+<h3 class="section">2.6 Parsing and Formatting</h3>
+
+<p><a name="index-g_t_002biso_002d8601_002dformat_002b-99"></a>
+
+<div class="defun">
+&mdash; Constant: <b>+iso-8601-format+</b><var><a name="index-g_t_002biso_002d8601_002dformat_002b-100"></a></var><br>
+<blockquote>
+        <p>The constant <var>+iso-8601-format+</var> is bound to a description of the ISO 8601 format.  An output with this format will look like this: &lsquo;<samp><span class="samp">2008-03-01T19:42:34.608506+01:00</span></samp>&rsquo;.  This is the default format for the <code>format-timestring</code> function.
+
+        </blockquote></div>
+
+   <p><a name="index-g_t_002basctime_002dformat_002b-101"></a>
+
+<div class="defun">
+&mdash; Constant: <b>+asctime-format+</b><var><a name="index-g_t_002basctime_002dformat_002b-102"></a></var><br>
+<blockquote>
+        <p>The constant <var>+asctime-format+</var> is bound to a format mirroring the output of the POSIX asctime() function.  An output with this format will look like this: &lsquo;<samp><span class="samp">Sat Mar  1 19:42:34 2008</span></samp>&rsquo;.
+
+        </blockquote></div>
+
+   <p><a name="index-g_t_002brfc_002d1123_002dformat_002b-103"></a>
+
+<div class="defun">
+&mdash; Constant: <b>+rfc-1123-format+</b><var><a name="index-g_t_002brfc_002d1123_002dformat_002b-104"></a></var><br>
+<blockquote>
+        <p>The constant <var>+rfc-1123-format+</var> is bound to a description of the format defined in RFC 1123 for Internet timestamps.  An output with this format will look like this: &lsquo;<samp><span class="samp">Sat, 01 Mar 2008 19:42:34 EDT</span></samp>&rsquo;.
+
+        </blockquote></div>
+
+   <p><a name="index-g_t_002biso_002dweek_002ddate_002dformat_002b-105"></a>
+
+<div class="defun">
+&mdash; Constant: <b>+iso-week-date-format+</b><var><a name="index-g_t_002biso_002dweek_002ddate_002dformat_002b-106"></a></var><br>
+<blockquote>
+        <p>The constant <var>+iso-week-date-format+</var> is bound to a description of the ISO 8601 Week Date format.  An output with this format will look like this: &lsquo;<samp><span class="samp">2009-W53-5</span></samp>&rsquo;.
+
+        </blockquote></div>
+
+   <p><a name="index-parse_002dtimestring-107"></a>
+
+<div class="defun">
+&mdash; Function: <b>parse-timestring</b><var> timestring &amp;key </var>(<var>start 0</var>)<var> end </var>(<var>fail-on-error t</var>) (<var>offset 0</var>)<var><a name="index-parse_002dtimestring-108"></a></var><br>
+<blockquote>
+        <p>Parses a timestring and returns the corresponding <code>timestamp</code>. 
+Parsing begins at <var>start</var> and stops at the <var>end</var>
+position. If there are invalid characters within <code>timestring</code>
+and <var>fail-on-error</var> is <code>T</code>, then an <code>invalid-timestring</code>
+error is signaled, otherwise <code>NIL</code> is returned.
+
+        <p>If there is no timezone specified in <code>timestring</code> then
+<var>offset</var> is used as the default timezone offset (in seconds). 
+</p></blockquote></div>
+
+   <p><a name="index-format_002dtimestring-109"></a>
+
+<div class="defun">
+&mdash; Function: <b>format-timestring</b> (<var>destination timestamp &amp;key </var>(<var>format +iso-8601-format+</var>) (<var>timezone *default-timezone*</var>))<var><a name="index-format_002dtimestring-110"></a></var><br>
+<blockquote>
+        <p>Constructs a string representation of TIMESTAMP according to FORMAT and returns it.  If destination is T, the string is written to *standard-output*.  If destination is a stream, the string is written to the stream.
+
+        <p>FORMAT is a list containing one or more of strings, characters, and keywords.  Strings and characters are output literally, while keywords are replaced by the values here:
+
+          <dl>
+<dt><code>:year</code><dd>*year
+<br><dt><code>:month</code><dd>*numeric month
+<br><dt><code>:day</code><dd>*day of month
+<br><dt><code>:weekday</code><dd>*numeric day of week, starting from 0 which means Sunday
+<br><dt><code>:hour</code><dd>*hour
+<br><dt><code>:min</code><dd>*minutes
+<br><dt><code>:sec</code><dd>*seconds
+<br><dt><code>:msec</code><dd>*milliseconds
+<br><dt><code>:usec</code><dd>*microseconds
+<br><dt><code>:nsec</code><dd>*nanoseconds
+<br><dt><code>:iso-week-year</code><dd>*year for ISO week date (can be different from regular calendar year)
+<br><dt><code>:iso-week-number</code><dd>*ISO week number (i.e. 1 through 53)
+<br><dt><code>:iso-week-day</code><dd>*ISO compatible weekday number (i.e. monday=1, sunday=7)
+<br><dt><code>:ordinal-day</code><dd>day of month as an ordinal (e.g. 1st, 23rd)
+<br><dt><code>:long-weekday</code><dd>long form of weekday (e.g. Sunday, Monday)
+<br><dt><code>:short-weekday</code><dd>short form of weekday (e.g. Sun, Mon)
+<br><dt><code>:long-month</code><dd>long form of month (e.g. January, February)
+<br><dt><code>:short-month</code><dd>short form of month (e.g. Jan, Feb)
+<br><dt><code>:hour12</code><dd>hour on a 12-hour clock
+<br><dt><code>:ampm</code><dd>am/pm marker in lowercase
+<br><dt><code>:gmt-offset</code><dd>the gmt-offset of the time, in +00:00 form
+<br><dt><code>:gmt-offset-or-z</code><dd>like :gmt-offset, but is Z when UTC
+<br><dt><code>:timezone</code><dd>timezone abbrevation for the time
+</dl>
+
+        <p>Elements marked by * can be placed in a list in the form:
+     <pre class="lisp">       (:keyword padding &amp;optional (padchar #\0))
+</pre>
+        <p>The string representation of the value will be padded with the padchar.
+
+        <p>You can see examples by examining the values in <var>+iso-8601-format+</var>, <var>+asctime-format+</var>, and <var>+rfc-1123-format+</var>.
+
+        <p>Produces on <var>stream</var> the timestring corresponding to the <var>timestamp</var> with
+the given options.  If <var>stream</var> is <code>nil</code>, only returns a string containing what
+would have been the output.  If <var>stream</var> is <code>t</code>, prints the string to
+<var>*standard-output*</var>.
+
+        <p>Example output:
+     <pre class="lisp">       LOCAL-TIME&gt; (format-timestring nil (now))
+       "2008-03-01T19:42:34.608506+01:00"
+</pre>
+        </blockquote></div>
+
+   <p><a name="index-format_002drfc3339_002dtimestring-111"></a>
+
+<div class="defun">
+&mdash; Function: <b>format-rfc3339-timestring</b> (<var>destination timestamp &amp;key omit-date-part omit-time-part omit-timezone-part </var>(<var>use-zulu t</var>))<var><a name="index-format_002drfc3339_002dtimestring-112"></a></var><br>
+<blockquote>
+        <p>Formats the time like format-timestring, but in RFC 3339 format. The options control valid options in the RFC. 
+</p></blockquote></div>
+
+<!-- =================================================================== -->
+   </body></html>
+

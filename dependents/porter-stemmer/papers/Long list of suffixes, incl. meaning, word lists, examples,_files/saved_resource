@@ -1,0 +1,14 @@
+userlikeCallbackButtonCheck({
+    "available": [
+        {
+            "id": 42063,
+            "name": "Support",
+            "first": {
+                "url_image": "https://userlike-cdn-operators.s3-eu-west-1.amazonaws.com/c41e3acd98eb3239ce293a57cbafeff005b33c9753c33501a2aaaf3b9baa2fe0_80x80.jpg",
+                "id": 28216,
+                "name": "Andrey Puhalevich"
+            }
+        }
+    ],
+    "message": "GROUP_ONLINE"
+})

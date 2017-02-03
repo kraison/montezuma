@@ -1,0 +1,69 @@
+(in-package #:montezuma)
+
+(defun set= (a b &key (test #'eql))
+  (and (null (set-difference a b :test test))
+       (null (set-difference b a :test test))))
+
+(deftestfixture index-writer-test
+    (:vars dir ir)
+
+  (:setup
+   (setf (fixture-var 'dir) (make-instance 'ram-directory)))
+
+  (:teardown
+   (close-down (fixture-var 'dir)))
+
+  (:testfun test-index-writer-initialize
+   (let* ((dir (fixture-var 'dir))
+	  (iw (make-instance 'index-writer
+			     :directory (fixture-var 'dir)
+			     :create-p T)))
+     (atest index-writer-initialize-1 (file-exists-p dir "segments") T #'bool=)
+     (close-down iw)
+     (atest index-writer-initialize-2 (file-exists-p dir "segments") T #'bool=)))
+
+  (:testfun test-index-writer-add-document
+    (let* ((dir (fixture-var 'dir))
+	   (iw (make-instance 'index-writer
+			      :directory dir
+			      :analyzer (make-instance 'standard-analyzer)
+			      :create-p T))
+	   (doc (index-test-helper-prepare-document))
+	   (infos (make-instance 'field-infos)))
+      ;;REA: have we solved the discrepancy in files sets?
+      ;;(break "test-index-writer-add-document ~s" (files dir))
+      (add-doc-fields infos doc)
+      ;;(break "test-index-writer-add-document add-doc-fields ~s" (files dir))
+      (add-document-to-index-writer iw doc)
+      ;;(break "test-index-writer-add-document add-document-to-index ~s" (files dir))
+      (atest index-writer-add-document-1 (document-count iw) 1)
+      (close-down iw)
+      ;;(break "test-index-writer-add-document after close-down  ~s" (files dir))
+      (atest index-writer-add-document-2
+             (files dir)
+             '("segments" "_1.cfs" "deletable")
+             #'(lambda (a b) (set= a b :test #'equal)))))
+
+  (:testfun test-index-writer-add-documents
+    (let* ((dir (fixture-var 'dir))
+	   (iw (make-instance 'index-writer
+			      :directory dir
+			      :analyzer (make-instance 'standard-analyzer) ; :language "english")
+			      :create-p T))
+	   (docs (index-test-helper-prepare-book-list))
+	   (infos (make-instance 'field-infos)))
+      ;; (setf (info-stream iw) *standard-output*)
+      (setf (merge-factor iw) 3)
+      (setf (min-merge-docs iw) 3)
+      (add-doc-fields infos (elt docs 0))
+      (dosequence (doc docs)
+	(add-document-to-index-writer iw doc))
+      (atest index-writer-add-documents-1 (document-count iw) 37)
+      (close-down iw))))
+
+#| files are hanging around and I don't know why yet
+      (atest index-writer-add-documents-3
+	     (files dir)
+	     '("segments" "_1i.cfs" "_1g.cfs" "_13.cfs" "deletable")
+	     #'(lambda (a b) (set= a b :test #'equal))))))
+|#

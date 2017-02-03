@@ -1,0 +1,133 @@
+(require "asdf")
+(setf asdf::*verbose-out* nil)
+(push #p"/home/sky/projects/lisp/clbuild/systems/" asdf:*central-registry*)
+(push #p"/home/sky/projects/lisp/montezuma/svn/" asdf:*central-registry*)
+
+;(push #p"/home/sky/projects/lisp/parenscript/" asdf:*central-registry*)
+(require :asdf-install)
+(require :sb-posix)
+
+;(load (merge-pathnames #p"/home/sky/projects/lisp/lispy/asdf-config.lisp"
+;                       (user-homedir-pathname)))
+
+; weblocks
+(push #p"/home/sky/mystic/packages/cl-weblocks/" asdf:*central-registry*)
+
+; perec
+(push #p"/home/sky/mystic/packages/metacopy/" asdf:*central-registry*)
+(push #p"/home/sky/mystic/packages/alexandria/" asdf:*central-registry*)
+(push #p"/home/sky/mystic/packages/cl-def/" asdf:*central-registry*)
+(push #p"/home/sky/mystic/packages/computed-class/" asdf:*central-registry*)
+(push #p"/home/sky/mystic/packages/cl-syntax-sugar/" asdf:*central-registry*)
+(push #p"/home/sky/mystic/packages/cl-walker/" asdf:*central-registry*)
+(push #p"/home/sky/mystic/packages/cl-yalog/" asdf:*central-registry*)
+(push #p"/home/sky/mystic/packages/defclass-star/" asdf:*central-registry*)
+(push #p"/home/sky/mystic/packages/postmodern/" asdf:*central-registry*)
+(push #p"/home/sky/mystic/packages/cl-rdbms/" asdf:*central-registry*)
+(push #p"/home/sky/mystic/packages/cl-serializer/" asdf:*central-registry*)
+(push #p"/home/sky/mystic/packages/local-time/" asdf:*central-registry*)
+(push #p"/home/sky/mystic/packages/metabang-bind/" asdf:*central-registry*)
+(push #p"/home/sky/mystic/packages/cl-perec/" asdf:*central-registry*)
+
+; mystic
+(push #p"/home/sky/mystic/common/" asdf:*central-registry*)
+(push #p"/home/sky/mystic/engine/" asdf:*central-registry*)
+(push #p"/home/sky/mystic/admin/" asdf:*central-registry*)
+(push #p"/home/sky/mystic/packages/cl-i18n/" asdf:*central-registry*)
+(push #p"/home/sky/mystic/packages/trivial-email-utf-8/" asdf:*central-registry*)
+;(push #p"/home/sky/projects/lisp/elephant/elephant/" asdf:*central-registry*)
+(push #p"/home/sky/mystic/packages/elephant/" asdf:*central-registry*)
+(push #p"/home/sky/mystic/packages/elephant/tests/" asdf:*central-registry*)
+(push #p"/home/sky/mystic/packages/hunchentoot-0.15.6.gzip/" asdf:*central-registry*)
+;(push #p"/home/sky/.sbcl/site/hunchentoot-0.14.7/" asdf:*central-registry*)
+(push #p"/home/sky/mystic/packages/cl-randist/" asdf:*central-registry*)
+
+; grand prix
+;(push #p"/home/sky/projects/mystic/grand-prix/src/" asdf:*central-registry*)
+;(push #p"/home/sky/projects/mystic/grand-prix/src/drivers/elephant/" asdf:*central-registry*)
+;(push #p"/home/sky/projects/mystic/grand-prix/src/drivers/elephant-sql/" asdf:*central-registry*)
+
+; misc
+(push #p"/home/sky/mystic/packages/cl-smtp.bknr/" asdf:*central-registry*)
+(push #p"/home/sky/mystic/packages/gp-export/" asdf:*central-registry*)
+(push #p"/home/sky/projects/lisp/spatial-trees/" asdf:*central-registry*)
+(push #p"/home/sky/projects/lisp/trivial-usocket/trunk/" asdf:*central-registry*)
+(push #p"/home/sky/projects/lisp/cl-xmpp/" asdf:*central-registry*)
+(push #p"/home/sky/projects/lisp/cl-xmpp/test/" asdf:*central-registry*)
+(push #p"/home/sky/projects/lisp/qbook/" asdf:*central-registry*)
+(push #p"/home/sky/projects/lisp/verrazano/" asdf:*central-registry*)
+(push #p"/home/sky/projects/lisp/dynamic-classes/" asdf:*central-registry*)
+(push #p"/home/sky/projects/lisp/symbolicweb/" asdf:*central-registry*)
+(push #p"/home/sky/projects/lisp/aromyxo/" asdf:*central-registry*)
+(push #p"/home/sky/projects/lisp/defclazz/" asdf:*central-registry*)
+(push #p"/home/sky/projects/lisp/cl-openid/" asdf:*central-registry*)
+(push #p"/home/sky/projects/lisp/trivial-utf-8/" asdf:*central-registry*)
+(push #p"/home/sky/projects/lisp/cl-containers/" asdf:*central-registry*)
+(push #p"/home/sky/projects/lisp/metatilities-base/" asdf:*central-registry*)
+(push #p"/home/sky/projects/lisp/metatilities/" asdf:*central-registry*)
+(push #p"/home/sky/projects/lisp/cells/" asdf:*central-registry*)
+(push #p"/home/sky/projects/lisp/cells/utils-kt/" asdf:*central-registry*)
+(push #p"/home/sky/projects/lisp/cells-gtk3/" asdf:*central-registry*)
+(push #p"/home/sky/projects/lisp/cells-gtk3/gtk-ffi/" asdf:*central-registry*)
+(push #p"/home/sky/projects/lisp/cells-gtk3/pod-utils/" asdf:*central-registry*)
+(push #p"/home/sky/projects/lisp/lichteblau/contrib/sb-heapdump/" asdf:*central-registry*)
+;(push #p"/home/sky/projects/lisp/flexi-streams/" asdf:*central-registry*)
+
+; cl-perec
+(push #p"/home/sky/projects/lisp/arnesi_dev/" asdf:*central-registry*)
+;(push #p"/home/sky/projects/mystic/cl-perec/" asdf:*central-registry*)
+;(push #p"/home/sky/projects/mystic/postmodern/" asdf:*central-registry*)
+;(push #p"/home/sky/projects/mystic/metacopy/" asdf:*central-registry*)
+;(push #p"/home/sky/projects/mystic/cl-rdbms/" asdf:*central-registry*)
+;(push #p"/home/sky/projects/lisp/defclass-star/" asdf:*central-registry*)
+;(push #p"/home/sky/projects/mystic/cl-def/" asdf:*central-registry*)
+;(push #p"/home/sky/projects/lisp/alexandria/" asdf:*central-registry*)
+;(push #p"/home/sky/projects/mystic/cl-serializer/" asdf:*central-registry*)
+;(push #p"/home/sky/projects/mystic/babel/" asdf:*central-registry*)
+;(push #p"/home/sky/projects/mystic/trivial-features/" asdf:*central-registry*)
+;(push #p"/home/sky/projects/mystic/computed-class/" asdf:*central-registry*)
+;(push #p"/home/sky/projects/mystic/metabang-bind/" asdf:*central-registry*)
+;(push #p"/home/sky/projects/lisp/stefil/" asdf:*central-registry*)
+
+; smtp
+(push #p"/home/sky/projects/lisp/xmls-tools/" asdf:*central-registry*)
+(push #p"/home/sky/projects/lisp/cl-sendmail/" asdf:*central-registry*)
+
+(push #p"/home/sky/projects/lisp/cl-cont/" asdf:*central-registry*)
+
+(push #p"/home/sky/projects/lisp/asdf-binary-locations/" asdf:*central-registry*)
+(asdf:oos 'asdf:load-op :asdf-binary-locations)
+
+(push #p"." asdf:*central-registry*)
+
+; stale FASLs
+(defmethod asdf:perform :around ((o asdf:load-op) (c asdf:cl-source-file))
+    (handler-case (call-next-method o c)
+      (#+sbcl sb-ext:invalid-fasl 
+       #-(or sbcl allegro lispworks cmu) error ()
+       (asdf:perform (make-instance 'asdf:compile-op) c)
+       (call-next-method))))
+
+; usable REPL
+(require :sb-aclrepl)
+;(require :linedit)
+;(funcall (intern "INSTALL-REPL" :linedit) :wrap-current t :eof-quits t)
+
+(defmacro loadsys (sys)
+  `(asdf:oos 'asdf:load-op (quote ,sys)))
+
+(sb-aclrepl:alias "l" (sys) (asdf:operate 'asdf:load-op sys))
+(sb-aclrepl:alias "pwd" () (format t "~A~%" (sb-posix:getcwd)))
+
+(defmacro nostylewarn (&body body)
+  `(handler-bind ((style-warning #'muffle-warning))
+     ,@body))
+
+(defun killthreads ()
+  (dolist (thr (sb-thread:list-all-threads))
+    (unless (eq thr sb-thread:*current-thread*)
+      (sb-thread:terminate-thread thr))))
+
+(export '(killthreads loadsys))
+
+(defparameter asdf::*verbose-out* *standard-output*)

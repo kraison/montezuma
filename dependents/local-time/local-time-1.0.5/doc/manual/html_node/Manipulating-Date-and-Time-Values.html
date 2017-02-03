@@ -1,0 +1,187 @@
+<html lang="en">
+<head>
+<title>Manipulating Date and Time Values - The local-time Manual</title>
+<meta http-equiv="Content-Type" content="text/html">
+<meta name="description" content="The local-time Manual">
+<meta name="generator" content="makeinfo 4.13">
+<link title="Top" rel="start" href="index.html#Top">
+<link rel="up" href="Public-API.html#Public-API" title="Public API">
+<link rel="prev" href="Querying-timestamp-Objects.html#Querying-timestamp-Objects" title="Querying timestamp Objects">
+<link rel="next" href="Parsing-and-Formatting.html#Parsing-and-Formatting" title="Parsing and Formatting">
+<link href="http://www.gnu.org/software/texinfo/" rel="generator-home" title="Texinfo Homepage">
+<!--
+Copyright (C) 2012 Daniel Lowe <dlowe dlowe.net>
+
+Copyright (C) 2012 Attila Lendvai <attila.lendvai gmail.com>
+
+
+     This manual describes the `local-time' Common Lisp library which is
+     based on Erik Naggum's  _The Long, Painful History of Time_
+     [NaggumPaper] paper.
+
+-->
+<meta http-equiv="Content-Style-Type" content="text/css">
+<style type="text/css"><!--
+  pre.display { font-family:inherit }
+  pre.format  { font-family:inherit }
+  pre.smalldisplay { font-family:inherit; font-size:smaller }
+  pre.smallformat  { font-family:inherit; font-size:smaller }
+  pre.smallexample { font-size:smaller }
+  pre.smalllisp    { font-size:smaller }
+  span.sc    { font-variant:small-caps }
+  span.roman { font-family:serif; font-weight:normal; } 
+  span.sansserif { font-family:sans-serif; font-weight:normal; } 
+body {font-family: century schoolbook, serif;
+      line-height: 1.3;
+      padding-left: 5em; padding-right: 1em;
+      padding-bottom: 1em; max-width: 60em;}
+table {border-collapse: collapse}
+span.roman { font-family: century schoolbook, serif; font-weight: normal; }
+h1, h2, h3, h4, h5, h6 {font-family:  Helvetica, sans-serif}
+/*h4 {padding-top: 0.75em;}*/
+dfn {font-family: inherit; font-variant: italic; font-weight: bolder }
+kbd {font-family: monospace; text-decoration: underline}
+/*var {font-family: Helvetica, sans-serif; font-variant: slanted}*/
+var {font-variant: slanted;}
+td  {padding-right: 1em; padding-left: 1em}
+sub {font-size: smaller}
+.node {padding: 0; margin: 0}
+
+.lisp { font-family: monospace;
+        background-color: #F4F4F4; border: 1px solid #AAA;
+        padding-top: 0.5em; padding-bottom: 0.5em; }
+
+/* coloring */
+
+.lisp-bg { background-color: #F4F4F4 ; color: black; }
+.lisp-bg:hover { background-color: #F4F4F4 ; color: black; }
+
+.symbol { font-weight: bold; color: #770055; background-color : transparent; border: 0px; margin: 0px;}
+a.symbol:link { font-weight: bold; color : #229955; background-color : transparent; text-decoration: none; border: 0px; margin: 0px; }
+a.symbol:active { font-weight: bold; color : #229955; background-color : transparent; text-decoration: none; border: 0px; margin: 0px; }
+a.symbol:visited { font-weight: bold; color : #229955; background-color : transparent; text-decoration: none; border: 0px; margin: 0px; }
+a.symbol:hover { font-weight: bold; color : #229955; background-color : transparent; text-decoration: none; border: 0px; margin: 0px; }
+.special { font-weight: bold; color: #FF5000; background-color: inherit; }
+.keyword { font-weight: bold; color: #770000; background-color: inherit; }
+.comment { font-weight: normal; color: #007777; background-color: inherit; }
+.string  { font-weight: bold; color: #777777; background-color: inherit; }
+.character   { font-weight: bold; color: #0055AA; background-color: inherit; }
+.syntaxerror { font-weight: bold; color: #FF0000; background-color: inherit; }
+span.paren1 { font-weight: bold; color: #777777; }
+span.paren1:hover { color: #777777; background-color: #BAFFFF; }
+span.paren2 { color: #777777; }
+span.paren2:hover { color: #777777; background-color: #FFCACA; }
+span.paren3 { color: #777777; }
+span.paren3:hover { color: #777777; background-color: #FFFFBA; }
+span.paren4 { color: #777777; }
+span.paren4:hover { color: #777777; background-color: #CACAFF; }
+span.paren5 { color: #777777; }
+span.paren5:hover { color: #777777; background-color: #CAFFCA; }
+span.paren6 { color: #777777; }
+span.paren6:hover { color: #777777; background-color: #FFBAFF; }
+--></style>
+</head>
+<body>
+<div class="node">
+<a name="Manipulating-Date-and-Time-Values"></a>
+<p>
+Next:&nbsp;<a rel="next" accesskey="n" href="Parsing-and-Formatting.html#Parsing-and-Formatting">Parsing and Formatting</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="Querying-timestamp-Objects.html#Querying-timestamp-Objects">Querying timestamp Objects</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="Public-API.html#Public-API">Public API</a>
+<hr>
+</div>
+
+<h3 class="section">2.5 Manipulating Date and Time Values</h3>
+
+<p><a name="index-timestamp_002b-83"></a><a name="index-timestamp_002d-84"></a>
+
+<div class="defun">
+&mdash; Function: <b>timestamp+</b><var> time amount unit<a name="index-timestamp_002b-85"></a></var><br>
+&mdash; Function: <b>timestamp-</b><var> time amount unit<a name="index-timestamp_002d-86"></a></var><br>
+<blockquote>
+        <p>Add or subtract the <var>amount</var> to the <var>time</var> using the specified
+<var>unit</var>.  <var>unit</var> may be one of ( <code>:nsec</code> <code>:sec</code>
+<code>:minute</code> <code>:hour</code> <code>:day</code> <code>:month</code> <code>:year</code>). 
+The value of the parts of the timestamp of higher resolution than the
+UNIT will never be touched.  If you want a precise number of seconds
+from a time, you should specify the offset in seconds. 
+</p></blockquote></div>
+
+   <p><a name="index-timestamp_002dmaximize_002dpart-87"></a>
+
+<div class="defun">
+&mdash; Function: <b>timestamp-maximize-part</b><var> timestamp part &amp;key offset timezone into<a name="index-timestamp_002dmaximize_002dpart-88"></a></var><br>
+<blockquote>
+        <p>Returns a timestamp with its parts maximized up to <var>part</var>.  <var>part</var> can be
+any of (:nsec :sec :min :hour :day :month).  If <var>into</var> is specified, it
+will be modified and returned, otherwise a new timestamp will be
+created. 
+</p></blockquote></div>
+
+   <p><a name="index-timestamp_002dminimize_002dpart-89"></a>
+
+<div class="defun">
+&mdash; Function: <b>timestamp-minimize-part</b><var> timestamp part &amp;key offset timezone into<a name="index-timestamp_002dminimize_002dpart-90"></a></var><br>
+<blockquote>
+        <p>Returns a timestamp with its parts minimized up to <var>part</var>.  <var>part</var> can be
+any of (:nsec :sec :min :hour :day :month).  If <var>into</var> is specified, it
+will be modified and returned, otherwise a new timestamp will be
+created. 
+</p></blockquote></div>
+
+   <p><a name="index-adjust_002dtimestamp-91"></a>
+
+<div class="defun">
+&mdash; Macro: <b>adjust-timestamp</b><var> timestamp &amp;body changes<a name="index-adjust_002dtimestamp-92"></a></var><br>
+<blockquote>
+        <p>Alters various parts of <var>timestamp</var>, given a list of changes.  The
+changes are in the format <code>(offset part value)</code> and <code>(set
+part value)</code>.
+
+     <pre class="lisp">       ;; Return a new <code>timestamp</code> value that points to the previous Monday
+       (adjust-timestamp (today) (offset :day-of-week :monday))
+       
+       ;; Return a new <code>timestamp</code> value that points three days ahead from now
+       (adjust-timestamp (today) (offset :day 3))
+</pre>
+        <p>Keep in mind that <code>adjust-timestamp</code> is not a mere setter for
+fields but instead it handles overflows and timezone conversions as
+expected. Also note that it's possible to specify multiple commands.
+
+        <p>The list of possible places to manipulate are: <code>:nsec</code>
+<code>:sec</code> <code>:sec-of-day</code> <code>:minute</code> <code>:hour</code>
+<code>:day</code> <code>:day-of-month</code> <code>:month</code> <code>:year</code>. 
+</p></blockquote></div>
+
+   <p><a name="index-adjust_002dtimestamp_0021-93"></a>
+
+<div class="defun">
+&mdash; Macro: <b>adjust-timestamp!</b><var> timestamp &amp;body changes<a name="index-adjust_002dtimestamp_0021-94"></a></var><br>
+<blockquote>
+        <p>Just like <code>adjust-timestamp</code>, but instead of returning a freshly
+constructed value, it alters the provided <var>timestamp</var> value (and
+returns it). 
+</p></blockquote></div>
+
+   <p><a name="index-timestamp_002dwhole_002dyear_002ddifference-95"></a>
+
+<div class="defun">
+&mdash; Function: <b>timestamp-whole-year-difference</b><var> time-a time-b<a name="index-timestamp_002dwhole_002dyear_002ddifference-96"></a></var><br>
+<blockquote>
+        <p>Returns the number of whole years elapsed between <var>time-a</var> and <var>time-b</var>. 
+<blockquote>
+<b>Note:</b> This is useful for calculating anniversaries and birthdays. 
+</blockquote>
+        </p></blockquote></div>
+
+   <p><a name="index-days_002din_002dmonth-97"></a>
+
+<div class="defun">
+&mdash; Function: <b>days-in-month</b><var> month year<a name="index-days_002din_002dmonth-98"></a></var><br>
+<blockquote>
+        <p>Returns the number of days in a given month of the specified year. 
+</p></blockquote></div>
+
+<!-- =================================================================== -->
+   </body></html>
+
