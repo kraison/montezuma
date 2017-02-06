@@ -26,7 +26,7 @@
 (defpackage #:montezuma
   (:nicknames "MTZ")
   (:use #:common-lisp #:montezuma.parser #:tg)
-  (:export 
+  (:export
    #:make-vector
    #:document-result
    #:annotated-field-value
@@ -51,6 +51,7 @@
    #:deleted-p
    #:add-document
    #:add-document-to-index
+   #:bulk-add-documents
    #:add-document-to-index-writer
    #:make-field-value-query
    #:make-key-field-query
@@ -78,7 +79,7 @@
    #:search
    #:weight
    #:scorer
-   #:reader 
+   #:reader
    #:each-hit
    #:each
    #:doc
@@ -155,7 +156,7 @@
 
    #:offset
    #:message
-   #:field-definitions 
+   #:field-definitions
    #:definition-aspect
    #:field-definition
    #:invalid-query

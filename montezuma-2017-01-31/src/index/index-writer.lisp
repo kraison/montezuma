@@ -92,7 +92,8 @@
 
 (defmethod optimize-index ((self index-writer))
   (flush-ram-segments self)
-  (with-slots (segment-infos merge-factor segment-directory use-compound-file-p) self
+  (with-slots (segment-infos merge-factor segment-directory use-compound-file-p)
+      self
     ;; FIXME: Insane.
     (while (or (> (size segment-infos) 1)
 	       (and (= (size segment-infos) 1)

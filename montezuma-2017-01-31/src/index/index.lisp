@@ -409,7 +409,8 @@
 
 (defgeneric add-document-to-index (index doc &key overwrite analyzer))
 
-(defmethod add-document-to-index ((self index) doc &key (overwrite t) (uniqueness nil) analyzer)
+(defmethod add-document-to-index ((self index) doc &key (overwrite t) (uniqueness nil) analyzer
+                                                     no-flush-p)
   "Add DOC to index. If overwrite, delete any documents with the same key value.
 Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don't add DOC."
   (let ((fdoc nil)
@@ -453,10 +454,22 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
         (setf (slot-value self 'has-writes-p) T)
         (add-document-to-index-writer (slot-value self 'writer) fdoc
                                       (if analyzer analyzer (analyzer writer)))
-        (when (slot-value self 'auto-flush-p)
+        (when (and (slot-value self 'auto-flush-p)
+                   (not no-flush-p))
           (flush self)))
       t)))
 
+(defmethod bulk-add-documents ((self index) documents &key analyzer)
+  (with-write-lock ((index-lock self))
+    (with-writer (self)
+      (dolist (fdoc documents)
+        (setf (slot-value self 'has-writes-p) T)
+        (add-document-to-index-writer (slot-value self 'writer) fdoc
+                                      (if analyzer analyzer (analyzer writer)))))
+    (when (slot-value self 'auto-flush-p)
+      (flush self)
+      (optimize-index self)))
+  t)
 
 ;; The main search method for the index. You need to create a query to
 ;; pass to this method. You can also pass a hash with one or more of
@@ -508,6 +521,7 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
               (get-document-with-term r id))
              (T
               (get-document r id)))))
+    ;; If reader is supplied, we assume that the caller already has the lock
     (if reader
         (get-it reader)
         (with-reader (self)
@@ -573,21 +587,24 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
                          new-val))
           ((integerp id)
            (let ((document (get-document self id)))
-             (with-modifier (self)
-               (when (listp new-val)
-                 (setf new-val (convert-alist-to-table new-val)))
-               (cond ((table-like-p new-val)
-                      (dolist (name (table-keys new-val))
-                        (let ((content (table-value new-val name)))
-                          (setf (document-values document name) (string content)))))
-                     ((typep new-val 'document)
-                      (setf document new-val))
-                     (T
-                      (setf (document-values document (get-index-option options :default-field))
-                            (string new-val))))
-               (delete-document modifier id))
-             (with-writer (self)
-               (add-document-to-index-writer writer document))))
+             (with-write-lock ((index-lock self))
+               (with-modifier (self)
+                 (when (listp new-val)
+                   (setf new-val (convert-alist-to-table new-val)))
+                 (cond ((table-like-p new-val)
+                        (dolist (name (table-keys new-val))
+                          (let ((content (table-value new-val name)))
+                            (setf (document-values document name) (string content)))))
+                       ((typep new-val 'document)
+                        (setf document new-val))
+                       (T
+                        (setf (document-values document (get-index-option options :default-field))
+                              (string new-val))))
+                 (delete-document modifier id))
+               (with-writer (self)
+                 (add-document-to-index-writer writer document))
+               (when (slot-value self 'auto-flush-p)
+                 (flush self)))))
           (T
            (error "Cannot update for id ~S" id)))
     (when (slot-value self 'auto-flush-p)
@@ -596,37 +613,41 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
 (defgeneric query-update (index query new-val))
 
 (defmethod query-update ((self index) query new-val)
-  (let ((docs-to-add '()))
-    (with-modifying-searcher (self)
-      (let ((reader (reader searcher))
-            (query (process-query self query)))
-        (search-each
-         searcher
-         query
-         #'(lambda (id score)
-             (declare (ignore score))
-             (let ((document (get-document self id :reader (reader searcher))))
-               (when (listp new-val)
-                 (setf new-val (convert-alist-to-table new-val)))
-               (cond ((table-like-p new-val)
-                      (dolist (name (table-keys new-val))
-                        (let ((content (table-value new-val name)))
-                          (setf (document-values document name) (string content)))))
-                     ((typep new-val 'document)
-                      (setf document new-val))
-                     (t
-                      (setf (document-values document
-                                             (get-index-option
-                                              (slot-value self 'options)
-                                              :default-field))
-                            (string new-val))))
-               (push document docs-to-add)
-               (delete-document reader id))))))
-    (with-writer (self)
-      (dolist (doc (reverse docs-to-add))
-	(add-document-to-index-writer writer doc))
-      (when (slot-value self 'auto-flush-p)
-	(flush self)))))
+  (let ((docs-to-add '()) (doc-ids-to-delete '()))
+    (with-write-lock ((index-lock self))
+      (with-modifying-searcher (self)
+        (let ((reader (reader searcher))
+              (query (process-query self query)))
+          (search-each
+           searcher
+           query
+           #'(lambda (id score)
+               (declare (ignore score))
+               (let ((document (get-document self id :reader (reader searcher))))
+                 (when (listp new-val)
+                   (setf new-val (convert-alist-to-table new-val)))
+                 (cond ((table-like-p new-val)
+                        (dolist (name (table-keys new-val))
+                          (let ((content (table-value new-val name)))
+                            (setf (document-values document name)
+                                  (string content)))))
+                       ((typep new-val 'document)
+                        (setf document new-val))
+                       (t
+                        (setf (document-values document
+                                               (get-index-option
+                                                (slot-value self 'options)
+                                                :default-field))
+                              (string new-val))))
+                 (push document docs-to-add)
+                 (push id doc-ids-to-delete))))
+          (dolist (id (reverse doc-ids-to-delete))
+            (delete-document reader id))))
+      (with-writer (self)
+        (dolist (doc (reverse docs-to-add))
+          (add-document-to-index-writer writer doc))
+        (when (slot-value self 'auto-flush-p)
+          (flush self))))))
 
 ;; FIXME: locks; called by readers who probably already have the read lock. ugh.
 (defmethod has-deletions-p ((self index))
@@ -680,7 +701,8 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
              (setf indexes (remove (slot-value self 'dir) indexes))
              (apply #'add-indexes writer indexes))
             (T
-             (error "Unknown index type ~S when trying to merge indexes." (elt indexes 0)))))))
+             (error "Unknown index type ~S when trying to merge indexes."
+                    (elt indexes 0)))))))
 
 (defgeneric persist (index directory &key create-p))
 
@@ -819,7 +841,6 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
 
 (defgeneric do-search (index query options))
 
-;; FIXME: locks?
 (defmethod do-search ((self index) query options)
   (with-searcher (self)
     (let ((pqr (process-query self query)))

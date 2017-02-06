@@ -83,10 +83,13 @@
 
 ;; We assume that the one calling do-commit has the write lock
 (defmethod do-commit ((self segment-reader))
-  (with-slots (segment deleted-docs-dirty-p deleted-docs norms norms-dirty-p segment-reader
-		       undelete-all-p index-directory cfs-reader) self
+  (with-slots (segment deleted-docs-dirty-p deleted-docs norms norms-dirty-p
+                       segment-reader undelete-all-p index-directory cfs-reader)
+      self
     (when deleted-docs-dirty-p
-      (write-bit-vector deleted-docs index-directory (add-file-extension segment "tmp"))
+      (write-bit-vector deleted-docs
+                        index-directory
+                        (add-file-extension segment "tmp"))
       (rename-directory-file index-directory
                              (add-file-extension segment "tmp")
                              (add-file-extension segment "del")))
@@ -351,5 +354,7 @@
       (let ((filename (if (null cfs-reader)
 			  (add-file-extension segment (format nil "f~S" number))
 			  (add-file-extension segment (format nil "s~S" number)))))
-	(rename-directory-file directory (add-file-extension segment "tmp") filename)
+	(rename-directory-file directory
+                               (add-file-extension segment "tmp")
+                               filename)
 	(setf (slot-value self 'dirty-p) NIL)))))
