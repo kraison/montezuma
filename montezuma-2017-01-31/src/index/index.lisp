@@ -240,7 +240,6 @@
     (with-write-lock (index-lock)
       (when (not open-p)
         (error "Tried to close an already closed directory."))
-      ;;(when reader (close-down reader))
       (close-all-readers self)
       (when writer (close-down writer))
       (close-down dir)
@@ -822,8 +821,8 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
 
 ;; FIXME: locks?
 (defmethod do-search ((self index) query options)
-  (let ((pqr (process-query self query)))
-    (with-searcher (self)
+  (with-searcher (self)
+    (let ((pqr (process-query self query)))
       (apply #'search-index searcher pqr options))))
 
 (defgeneric fetch-field-value (index doc name))
