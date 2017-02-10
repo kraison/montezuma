@@ -27,7 +27,7 @@
   (with-slots (fields-stream index-stream) self
     (close-down fields-stream)
     (close-down index-stream)))
-
+#|
 (defmethod get-document ((self fields-reader) n &key &allow-other-keys)
   (with-slots (index-stream fields-stream field-infos) self
     (seek index-stream (* n 8))
@@ -80,6 +80,63 @@
 						 :index index
 						 :store-term-vector stv)))))))))
       doc)))
+|#
+(defmethod get-document ((self fields-reader) n)
+  (handler-case
+      (with-slots (index-stream fields-stream field-infos) self
+        (seek index-stream (* n 8))
+        (let ((position (read-long index-stream)))
+          (seek fields-stream position))
+        (let ((doc (make-instance 'document)))
+          (let ((num-fields (read-vint fields-stream)))
+            (dotimes (i num-fields)
+              (let* ((field-number (read-vint fields-stream))
+                     (fi (get-field field-infos field-number))
+                     (bits (read-byte-from-buffer fields-stream)))
+                (let ((compressed (logbitp +field-is-compressed-bit+ bits))
+                      (tokenize (logbitp +field-is-tokenized-bit+ bits))
+                      (binary (logbitp +field-is-binary-bit+ bits)))
+                  (if binary
+                      (let ((b (make-array (read-vint fields-stream))))
+                        (read-bytes-from-buffer fields-stream b 0 (length b))
+                        (if compressed
+                            (add-field doc
+                                       (make-binary-field (field-name fi)
+                                                          (uncompress b)
+                                                          :compress))
+                          (add-field doc (make-binary-field (field-name fi) b T))))
+                    (let ((store T)
+                          (index (if (field-indexed-p fi)
+                                     (if tokenize
+                                         :tokenized
+                                       (if (field-omit-norms-p fi)
+                                           :no-norms
+                                         :untokenized))
+                                   NIL))
+                          (data nil))
+                      (if compressed
+                          (progn
+                            (setf store :compress)
+                            (let ((b (make-array (read-vint fields-stream))))
+                              (read-bytes-from-buffer fields-stream b 0 (length b))
+                              (setf data (bytes-to-string (uncompress b)))))
+                        (setf data (read-string fields-stream)))
+                      (let ((stv (if (field-store-term-vector-p fi)
+                                     (cond ((and (field-store-positions-p fi)
+                                                 (field-store-offsets-p fi))
+                                            :with-positions-offsets)
+                                           ((field-store-positions-p fi) :with-positions)
+                                           ((field-store-offsets-p fi) :with-offsets)
+                                           (T T))
+                                   NIL)))
+                        (add-field doc (make-field (field-name fi) data
+                                                   :stored store
+                                                   :index index
+                                                   :store-term-vector stv)))))))))
+          doc))
+    (error (condition)
+      (format *standard-output* "~&~a error condition was raised while in fields-io/get-document with n = ~a~%" condition n) 
+      nil)))
 
 
 (defun uncompress (input)
