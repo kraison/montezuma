@@ -75,6 +75,7 @@ all or part of the query terms, they are submitted for mark-up, for example: mar
      (setf x y))
    (setf start x)))
 
+#|
 (defmethod precis ((docres document-result)
                    (apparatus field-expressions)
                    (field string)
@@ -101,6 +102,36 @@ all or part of the query terms, they are submitted for mark-up, for example: mar
                 (if (< offset (length sentence))
                     (funcall processor (subseq sentence offset)))
                 (return-from precis))))))
+     ".;!?,;")))
+|#
+
+(defmethod precis ((docres document-result)
+                   (apparatus field-expressions)
+                   (field string)
+                   &key processor hitfunc 
+                   all-matching-sentences)
+  (let* ((fex (field-manifest apparatus field))
+         (scanner (scanner fex)))
+    (unless scanner (return-from precis))
+    (split-sentences
+     (field-value docres field)
+     #'(lambda(sentence)
+         (when (satisfies-conditions fex sentence)
+           (let ((matches (all-matches scanner sentence)))
+             (when matches
+               (loop
+                with offset = 0
+                for (starts ends) in matches
+                while (and starts ends) do
+                (if (> starts offset)
+                    (funcall processor (subseq sentence offset starts)))
+                (let ((word (subseq sentence starts ends)))
+                  (funcall hitfunc word (find word (conditions fex) :test #'string-equal)))
+                (setf offset ends)
+                finally
+                (if (< offset (length sentence))
+                    (funcall processor (subseq sentence offset)))
+                (unless all-matching-sentences (return-from precis)))))))
      ".;!?,;")))
 
 (defmethod annotate ((docres document-result)
