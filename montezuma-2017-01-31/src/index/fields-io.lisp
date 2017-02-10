@@ -81,7 +81,7 @@
 						 :store-term-vector stv)))))))))
       doc)))
 |#
-(defmethod get-document ((self fields-reader) n)
+(defmethod get-document ((self fields-reader) n &key &allow-other-keys)
   (handler-case
       (with-slots (index-stream fields-stream field-infos) self
         (seek index-stream (* n 8))
