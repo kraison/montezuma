@@ -1,5 +1,7 @@
 (in-package #:montezuma)
 
+(defvar *stop-words-directory* nil)
+
 (defclass token-filter (token-stream)
   ((input :initarg :input)))
 
@@ -39,8 +41,16 @@
   (cl-ppcre:split "\\s+" (file-contents path)))
 
 (defun load-language-stop-words (language)
-  (load-word-list (format nil "~a~a.txt" cl-user::*stop-words* language)))
-  ;;(load-word-list (format nil "~astop-words/~a.txt" cl-user::*corpus-root* language)))
+  (cond ((not *stop-words-directory*)
+         (warn "*STOP-WORDS-DIRECTORY* is NIL, no words loaded"))
+        (t
+         (let ((stop-words-file (make-pathname :name language
+                                               :type "txt"
+                                               :defaults *stop-words-directory*)))
+           (if (probe-file stop-words-file)
+               (load-word-list stop-words-file)
+               (warn "Stop words file ~A does not exist, no words loaded"
+                     stop-words-file))))))
 
 (defclass text-filter (stop-filter)
   ())

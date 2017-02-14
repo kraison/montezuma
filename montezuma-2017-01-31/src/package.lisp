@@ -32,6 +32,7 @@
    #:annotated-field-value
    #:annotations
    #:*montezuma-indexes*
+   #:*stop-words-directory*
    #:get-corpus
    #:get-absolute-path
    #:relative-path
