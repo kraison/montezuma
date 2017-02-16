@@ -783,11 +783,18 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
           reader)))))
 
 (defmethod ensure-reader-open ((self index))
+  (with-slots (open-p) self
+    (unless open-p
+      (error "Tried to use a closed index."))
+    (gethash (bordeaux-threads:current-thread) (readers self))))
+#|
+(defmethod ensure-reader-open ((self index))
   (with-slots (open-p reader) self
     (unless open-p
       (error "Tried to use a closed index."))
     reader))
-
+|#
+	
 (defgeneric index-path (index))
 
 (defmethod index-path ((self index))
