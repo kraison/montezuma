@@ -454,7 +454,7 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
               (delete-from-cache self key-value)
               (query-delete self query))
              ((exists-p self query)
-              (return-from add-document-to-index nil))))))
+              (return-from add-document-to-index)))))
       (with-writer
        (self)
        (setf (slot-value self 'has-writes-p) T)
@@ -465,12 +465,7 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
           (when (and table keyvalue)
             (loop
              for (docnum) in (search-for-keyvalue self keyvalue) do
-             (add-to-
-	      
-	      
-	      
-	      self table docnum))))
-
+             (add-to-cache self table docnum))))
        (when (and (slot-value self 'auto-flush-p)
                   (not no-flush-p))
          (flush self)))
