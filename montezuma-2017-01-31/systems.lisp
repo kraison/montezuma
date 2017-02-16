@@ -19,7 +19,7 @@
 
 ;;(defparameter *pastes* (merge-pathnames "../paste-search" *pastes-index-pathname*))
 
-(dolist (p '(*this-file* *filename* *working-directory* *root* *dependencies* *corpus-root* *pastes-index-pathname*))
+(dolist (p '(*this-file* *filename* *working-directory* *dependencies* *corpus-root* *pastes-index-pathname*))
   (format t "; ~a ~s~%" p (probe-file (symbol-value p))))
 
 
