@@ -14,6 +14,25 @@
    (norms :initarg :norms :reader norms)
    (weight-value :reader weight-value)))
 
+(defclass key-term-scorer (term-scorer)
+  ())
+
+(defmethod query ((scorer term-scorer))
+  (with-slots (weight) scorer
+    (query weight)))
+
+(defmethod index ((scorer term-scorer))
+  (index (query scorer)))
+
+(defmethod term ((scorer term-scorer))
+ (term (query scorer)))
+
+(defmethod term-text ((scorer term-scorer))
+  (term-text (term (query scorer))))
+
+(defmethod term-field ((scorer term-scorer))
+  (field (term (query scorer))))
+
 (defmethod print-object ((self term-scorer) stream)
   (print-unreadable-object (self stream :type T :identity T)
     (format stream "weight: ~S" (slot-value self 'weight))))
@@ -29,7 +48,8 @@
     (setf (aref (slot-value self 'score-cache) i)
           (* (weight-value self) (tf (similarity self) i)))))
 
-(defmethod each-hit ((self term-scorer) fn)
+(defmethod each-document-hit ((self term-scorer) fn)
+  ;;(break "each-hit term-scorer ~s" self)
   (loop while (next? self) do
         (let* ((f (aref (freqs self) (pointer self)))
                (score (if (< f +score-cache-size+)
@@ -40,6 +60,17 @@
           (setf score (* score (similarity-decode-norm 
                                 (aref (norms self) (document self)))))
           (funcall fn (document self) score))))
+
+(defmethod each-hit ((self key-term-scorer) fn)
+  ;; Possib;ity of more performance improvements REANZ1959
+  (let ((index (index self)))
+    (if (and index (cached index (field (query self))))
+        (loop for docnum in (key-term-documents index (term-text self)) do
+              (funcall fn docnum 1.0))
+      (each-document-hit self fn))))
+
+(defmethod each-hit ((self term-scorer) fn)
+  (each-document-hit self fn))
 
 #||
 (defmethod each-hit-up-to ((self term-scorer) (max-docs integer) fn)
@@ -90,10 +121,3 @@
 	  (setf document +max-docs+))
       result)))
 
-
-  
-#||
-(defmethod explain (document)
-  ;;??
-  )
-||#

@@ -111,9 +111,7 @@
    (cached-term-enum :initform nil)))
 
 (defmethod initialize-instance :after ((self term-infos-reader) &key)
-  (with-slots
-        (id orig-enum size directory segment field-infos index-enum skip-interval)
-      self
+  (with-slots (orig-enum size directory segment field-infos index-enum skip-interval) self
     (setf orig-enum
           (make-instance 'segment-term-enum
                          :input (open-input directory

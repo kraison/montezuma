@@ -4,12 +4,12 @@
 
 (defparameter *this-file* (princ-to-string (load-time-value (or #.*compile-file-pathname* *load-pathname*))))
 (defparameter *filename* (format () "~a.~a" (pathname-name *this-file*) (pathname-type *this-file*)))
-(defparameter *root* (subseq *this-file* 0 3))
+;;(defparameter *root* (subseq *this-file* 0 3))
 (defparameter *working-directory* (subseq *this-file* 0 (search *filename* *this-file*)))
 (defparameter *dependencies* (merge-pathnames "../dependents/" *working-directory*))
-(defparameter *montezuma-root* *working-directory*) ;(merge-pathnames "../montezuma-reanz59/" *dependencies*))
-(defparameter *corpus-root* (merge-pathnames "/corpus/" *root*))
-(defparameter *etec-corpus* (merge-pathnames "/corpus/etec/" *root*))
+(defparameter *montezuma-root* *working-directory*)
+(defparameter *corpus-root* (merge-pathnames "/corpus/" *working-directory*))
+(defparameter *etec-corpus* (merge-pathnames "/corpus/etec/" *corpus-root*))
 
 (defparameter *stop-words* (merge-pathnames "../stop-words/" *working-directory*))
 
@@ -19,7 +19,7 @@
 
 ;;(defparameter *pastes* (merge-pathnames "../paste-search" *pastes-index-pathname*))
 
-(dolist (p '(*this-file* *filename* *working-directory* *root* *dependencies* *corpus-root* *pastes-index-pathname*))
+(dolist (p '(*this-file* *filename* *working-directory* *dependencies* *corpus-root* *pastes-index-pathname*))
   (format t "; ~a ~s~%" p (probe-file (symbol-value p))))
 
 
@@ -36,7 +36,7 @@
     (:trivial-gray-streams "trivial-gray-streams/trivial-gray-streams-master/trivial-gray-streams.asd"
      "https://github.com/trivial-gray-streams/trivial-gray-streams") ; reqd by diff
 
-    ;;(:diff "froydnj-diff/diff-master/diff.asd" "https://github.com/froydnj/diff")
+    (:diff "froydnj-diff/diff-master/diff.asd" "https://github.com/froydnj/diff")
 
     (:bordeaux-threads "bordeaux-threads/bordeaux-threads-0.8.3/bordeaux-threads.asd"
      "https://gitlab.common-lisp.net/bordeaux-threads/bordeaux-threads") ; reqd by cl-fad
@@ -50,54 +50,18 @@
 
     (:local-time "local-time/local-time-1.0.5/local-time.asd" "https://common-lisp.net/project/local-time/")
 
-    ;;(:uiop "uiop/uiop-3.1.4/uiop.asd" "http://quickdocs.org/uiop/api")
+    (:split-sequence "split-sequence/split-sequence.asd" "http://quickdocs.org/split-sequence/")
 
-    ;;(:xmls "xmls/xmls-1.7.1/xmls.asd" "http://www.cliki.net/XMLS")
-
-    ;;(:trivial-backtrace "trivial-backtrace/trivial-backtrace-20120909-git/trivial-backtrace.asd"
-    ;; "http://quickdocs.org/trivial-backtrace/")
-
-    ;;(:rfc2388 "RFC2388/rfc2388/rfc2388.asd" "https://common-lisp.net/project/rfc2388/")
-
-    ;;(:md5 "MD5/md5-2.0.2/md5.asd" "http://www.cliki.net/CL-MD5#")
+    (:bt-semaphore "bt-semaphore/bt-semaphore-20131003-git/bt-semaphore.asd" "http://quickdocs.org/bt-semaphore/")
 
     #-:COMMON-LISPWORKS (:usocket "usocket/usocket-0.6.4/usocket.asd" "http://quickdocs.org/usocket/")
 
-    ;;(:flexi-streams "flexi-streams/flexi-streams-1.0.15/flexi-streams.asd" "http://weitz.de/files/flexi-streams.tar.gz")
-
-    ;;(:cl-base64 "cl-base64/cl-base64-3.3.3/cl-base64.asd" "http://files.b9.com/cl-base64/cl-base64-latest.tar.gz")
-
-    ;;(:chunga "chunga/chunga-1.1.6/chunga.asd" "http://weitz.de/files/chunga.tar.gz")
-
-    ;;(:chipz "chipz/chipz-master/chipz.asd" "https://github.com/froydnj/chipz")
-
-    ;;(:puri "puri/puri-1.5.5/puri.asd" "http://quickdocs.org/puri/")
-
-    ;;(:drakma "drakma/drakma-2.0.1/drakma.asd" "http://weitz.de/files/drakma.tar.gz")
-
-    ;;(:do-urlencode "do-urlencode-master/do-urlencode.asd" "https://github.com/drdo/do-urlencode")
-
-    ;;(:cl-who "cl-who/cl-who-1.1.4/cl-who.asd" "http://weitz.de/files/cl-who.tar.gz")
-
     (:trivial-garbage "trivial-garbage/trivial-garbage_0.20/trivial-garbage.asd" "https://common-lisp.net/project/trivial-garbage/")
-
-    ;;(:cffi "cffi/cffi_0.17.1/cffi.asd" "https://common-lisp.net/project/cffi/releases/?M=D")
-
-    ;;(:cl+ssl "cl-plus-ssl/cl-plus-ssl-master/cl+ssl.asd" "https://github.com/cl-plus-ssl/cl-plus-ssl")
-
-    ;;(:hunchentoot "hunchentoot/hunchentoot-1.2.31/hunchentoot.asd" "http://weitz.de/files/hunchentoot.tar.gz")
 
     (:porter-stemmer "porter-stemmer/porter-stemmer.asd" "http://tartarus.org/martin/PorterStemmer/")
 
-    ;;(:s-xml "s-xml/s-xml.asd" "https://common-lisp.net/project/s-xml/") ; reqd by cl-prevalence
-
-    ;;(:s-sysdeps "s-sysdeps/s-sysdeps.asd" "https://github.com/svenvc/s-sysdeps") ; reqd by cl-prevalence
-
-    ;;(:cl-prevalence "skypher-cl-prevalence/cl-prevalence.asd" "https://common-lisp.net/project/cl-prevalence/")
-
     (:montezuma "../montezuma-2017-01-31/montezuma.asd" "https://sourceforge.net/projects/montezuma/files/")
 
-    ;;(:oropendola "../oropendola/oropendola.asd" "https://sourceforge.net/projects/montezuma/files/")
     ))
 
 (defun loader (system)
@@ -116,3 +80,7 @@
   (asdf:oos 'asdf:test-op '#:montezuma))
 
 ;;(montezuma:make-montezuma-host)
+
+#|
+(diff:format-diff 'diff:UNIFIED-DIFF "D:\\dependencies\\montezuma\\montezuma-mods\\src\\index\\index.lisp" "D:\\dependencies\\montezuma-master\\montezuma-2017-01-31\\src\\index\\index.lisp")
+|#

@@ -39,6 +39,7 @@
 
 ;; We assume that anyone calling this already has the rw-lock
 (defun open-index-reader (directory &key (close-directory-p T) (infos nil) id)
+  (declare (ignore id))
   (if (null directory)
       (setf directory (make-instance 'ram-directory))
       (when (stringp directory)

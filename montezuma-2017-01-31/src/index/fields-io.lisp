@@ -16,7 +16,7 @@
    (size :reader size)))
 
 (defmethod initialize-instance :after ((self fields-reader) &key directory segment)
-  (with-slots (fields-stream index-stream size id) self
+  (with-slots (fields-stream index-stream size) self
     ;;(setf fields-stream (open-segment-file directory (format nil "~A_~A" segment id)  *fdt-extension* :input))
     ;;(setf index-stream (open-segment-file directory (format nil "~A_~A" segment id) *fdx-extension* :input))
     (setf fields-stream (open-segment-file directory segment *fdt-extension* :input))

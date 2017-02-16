@@ -26,7 +26,7 @@
 (defmethod initialize-instance :after ((self segment-reader) &key info)
   (with-slots (segment index-directory deleted-docs field-infos fields-reader
 		       cfs-reader term-infos deleted-docs-dirty-p freq-stream
-		       tv-reader-orig prox-stream norms-dirty-p id) self
+		       tv-reader-orig prox-stream norms-dirty-p) self
     (setf segment (segment-info-name info))
     (let ((dir index-directory))
       (when (uses-compound-file-p info)
