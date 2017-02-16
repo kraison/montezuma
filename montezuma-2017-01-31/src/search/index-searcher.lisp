@@ -152,8 +152,7 @@
                 (minimum-score 0.0))
             (each-hit scorer
                       #'(lambda (doc score)
-                          (when (and (> score 0.0)
-                                     (> score score-cutoff)
+                          (when (and (> score score-cutoff)
                                      (or (null bits)
                                          (bit-set-p bits doc)))
                             (incf total-hits)
