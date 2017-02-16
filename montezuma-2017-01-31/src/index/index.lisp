@@ -996,6 +996,13 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
          (return-from get-document-number-from-query docnum)))
     -1))
 
+(defmethod key-term-documents ((index index) (text string))
+  (let ((cache (metadata index)))
+    (if cache (mapcar #'first (gethash (string-downcase text) cache)))))
+
+(defmethod key-term-frequency ((index index) (text string))  
+  (let ((cache (metadata index)))
+    (if cache (length (gethash (string-downcase text) cache)))))
 
 (defmethod search-document-and-scores ((index index) query)
   (let ((results ()))
