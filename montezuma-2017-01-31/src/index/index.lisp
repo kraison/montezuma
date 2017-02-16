@@ -465,7 +465,11 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
           (when (and table keyvalue)
             (loop
              for (docnum) in (search-for-keyvalue self keyvalue) do
-             (add-to-cache self table docnum))))
+             (add-to-
+	      
+	      
+	      
+	      self table docnum))))
 
        (when (and (slot-value self 'auto-flush-p)
                   (not no-flush-p))
@@ -995,6 +999,12 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
          (declare (ignore score))
          (return-from get-document-number-from-query docnum)))
     -1))
+
+(defmethod cached ((index t) (field string))
+  (and *cache-enabled*
+       index
+       (not (is-ram-directory index))
+       (string-equal (document-key index) field)))
 
 (defmethod key-term-documents ((index index) (text string))
   (let ((cache (metadata index)))
