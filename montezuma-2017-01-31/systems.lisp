@@ -2,16 +2,30 @@
   (require 'asdf)
 )
 
-(defparameter *this-file* (princ-to-string (load-time-value (or #.*compile-file-pathname* *load-pathname*))))
-(defparameter *filename* (format () "~a.~a" (pathname-name *this-file*) (pathname-type *this-file*)))
-;;(defparameter *root* (subseq *this-file* 0 3))
-(defparameter *working-directory* (subseq *this-file* 0 (search *filename* *this-file*)))
+;; for backwards compatibility. When all cl-user references have been changed these parameter coul;d be deleted
+(defparameter *this-file* #.(or *compile-file-pathname* *load-pathname*))
+(defparameter *working-directory* (make-pathname :defaults *this-file* :type nil :name nil :version nil))
 (defparameter *dependencies* (merge-pathnames "../dependents/" *working-directory*))
 (defparameter *montezuma-root* *working-directory*)
 (defparameter *corpus-root* (merge-pathnames "/corpus/" *working-directory*))
 (defparameter *etec-corpus* (merge-pathnames "/corpus/etec/" *corpus-root*))
+(defparameter *stop-words-directory* (merge-pathnames "../stop-words/" *working-directory*))
+(defparameter *stop-words* *stop-words-directory*)
 
-(defparameter *stop-words* (merge-pathnames "../stop-words/" *working-directory*))
+(defpackage :montezuma
+  (:use
+   :common-lisp))
+
+(in-package :montezuma)
+
+(defparameter *this-file* #.(or *compile-file-pathname* *load-pathname*))
+(defparameter *working-directory* (make-pathname :defaults *this-file* :type nil :name nil :version nil))
+(defparameter *dependencies* (merge-pathnames "../dependents/" *working-directory*))
+(defparameter *montezuma-root* *working-directory*)
+(defparameter *corpus-root* (merge-pathnames "/corpus/" *working-directory*))
+(defparameter *etec-corpus* (merge-pathnames "/corpus/etec/" *corpus-root*))
+(defparameter *stop-words-directory* (merge-pathnames "../stop-words/" *working-directory*))
+(defparameter *stop-words* *stop-words-directory*)
 
 (defparameter *pastes-index-pathname*
   (merge-pathnames "contrib/pastes-1000/pasteindex/" *working-directory*)
@@ -19,7 +33,7 @@
 
 ;;(defparameter *pastes* (merge-pathnames "../paste-search" *pastes-index-pathname*))
 
-(dolist (p '(*this-file* *filename* *working-directory* *dependencies* *corpus-root* *pastes-index-pathname*))
+(dolist (p '(*this-file* *working-directory* *dependencies* *montezuma-root* *corpus-root* *stop-words* *pastes-index-pathname*))
   (format t "; ~a ~s~%" p (probe-file (symbol-value p))))
 
 
@@ -64,17 +78,19 @@
 
     ))
 
-(defun loader (system)
-  (unless (find (car system) *systems*)
-    (let ((path (merge-pathnames (cadr system) *dependencies*)))
-      (format t "; Loading ~s: ~a~%" (car system) path)
+(defun loader (name relative-path url)
+  (declare (ignore url))
+  (unless (find name *systems*)
+    (let ((path (merge-pathnames relative-path *dependencies*)))
+      (format t "; Loading ~s: ~a~%" name path)
       (unless (probe-file path) (error "system definition file can't be found: ~a" path))
-      (load path)
-      (asdf::compile-system (car system))
-      (asdf::load-system (car system))
-      (pushnew (car system) *systems*))))
+      (let ((*package* (find-package :asdf-user)))
+        (load path))
+      (asdf::compile-system name)
+      (asdf::load-system name)
+      (pushnew name *systems*))))
 
-(dolist (system systems) (loader system))
+(dolist (system systems) (apply #'loader system))
 
 (defun test-montezuma ()
   (asdf:oos 'asdf:test-op '#:montezuma))
