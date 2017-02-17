@@ -85,7 +85,7 @@ OVERWRITE is true overwrites the file designtated by TO if it exists."
        (setf offset end)))
     (if (> offset 0) (terpri))))
 
-(defun search-files (target &optional (root cl-user::*working-directory*) (types '("lisp")))
+(defun search-files (target &optional (root *working-directory*) (types '("lisp")))
   (let* ((regexp (concatenate 'string "^.*" target ".*$"))
          (scanner (cl-ppcre:create-scanner regexp :case-insensitive-mode t :multi-line-mode t)))
     (fad:walk-directory 
@@ -94,10 +94,10 @@ OVERWRITE is true overwrites the file designtated by TO if it exists."
      :directories :depth-first)))
 
 (defun search-montezuma (target)
-  (search-files target :root  cl-user::*MONTEZUMA-ROOT*))
+  (search-files target *MONTEZUMA-ROOT*))
 
 (defun search-dependencies (target)
-  (search-files target :root  cl-user::*DEPENDENCIES*))
+  (search-files target *DEPENDENCIES*))
 
 (defun list-files (root &optional types)
   (let ((files ()))
