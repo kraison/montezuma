@@ -413,8 +413,8 @@
    (let* ((pastes ;setf (fixture-var 'pastes)
          (make-instance
           'mtz:index
-          :path (merge-pathnames "contrib/pastes-1000/pasteindex" cl-user::*montezuma-root*)
-          :document-root (merge-pathnames "contrib/pastes-1000/pastes.sexp" cl-user::*montezuma-root*)
+          :path (merge-pathnames "contrib/pastes-1000/pasteindex" *montezuma-root*)
+          :document-root (merge-pathnames "contrib/pastes-1000/pastes.sexp" *montezuma-root*)
           :title "1000 documents submitted to lisppastes"
           :document-key "number"
           :create-p NIL
