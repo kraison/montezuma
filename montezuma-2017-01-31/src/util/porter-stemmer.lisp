@@ -402,8 +402,8 @@
     str))
 
 (defun test-stemmer (&optional validate) ; Run against the distributed test files.
-  (with-open-file (f1 (merge-pathnames "src/util/porter-stemmer-input.txt" cl-user::*MONTEZUMA-ROOT*))
-    (with-open-file (f2  (merge-pathnames "src/util/porter-stemmer-output.txt" cl-user::*MONTEZUMA-ROOT*))
+  (with-open-file (f1 (merge-pathnames "src/util/porter-stemmer-input.txt" *MONTEZUMA-ROOT*))
+    (with-open-file (f2  (merge-pathnames "src/util/porter-stemmer-output.txt" *MONTEZUMA-ROOT*))
       (loop as w1 = (read-line f1 nil nil)
 	  while w1
 	  as w2 = (read-line f2 nil nil)
