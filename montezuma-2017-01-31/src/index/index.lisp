@@ -469,8 +469,9 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
        (when (and (slot-value self 'auto-flush-p)
                   (not no-flush-p))
          (flush self)))
-      t)))
+      t))))
 
+#|
 (defmethod bulk-add-documents ((self index) documents &key analyzer)
   (with-write-lock ((index-lock self))
     (with-writer (self)
@@ -482,6 +483,7 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
       (flush self)
       (optimize-index self)))
   t)
+|#
 
 ;; The main search method for the index. You need to create a query to
 ;; pass to this method. You can also pass a hash with one or more of
@@ -781,13 +783,13 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
                                      :id (next-reader-id))))
           (push reader in-use-readers)
           reader)))))
-#|
+
 (defmethod ensure-reader-open ((self index))
   (with-slots (open-p) self
     (unless open-p
       (error "Tried to use a closed index."))
-    (get-reader self))
-#|
+    (get-reader self)))
+
 (defmethod ensure-reader-open ((self index))
   (with-slots (open-p) self
     (unless open-p
@@ -799,7 +801,6 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
     (unless open-p
       (error "Tried to use a closed index."))
     reader))
-|#
 	
 (defgeneric index-path (index))
 
@@ -808,38 +809,6 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
 
 (defun index-write-date (index)
   (file-write-date (merge-pathnames (index-path index) "segments")))
-
-#|
-(defun metadata-vector (index &optional refresh)
-  (let ((keys-path (index-keys-metadata-path index))
-        (records (make-array (size index) :element-type 'list :fill-pointer 0 :adjustable t)))
-    ;;(format t "metadata ~s~%" metadata-path)
-    (cond
-     ((or refresh
-          (not (probe-file keys-path))
-          (> (index-write-date index) (file-write-date keys-path)))
-      (search-each
-       index
-       (make-instance 'match-all-query)
-       #'(lambda (docnum score)
-           (declare (ignore score))
-           (unless (deleted-p index docnum)
-             (vector-push-extend (document-digest index docnum) records)
-             (princ "." *standard-output*)))
-       `(:num-docs ,(max 1 (size index))
-         :first-doc 0
-         :sort nil))
-      (setf records (sort records #'string-lessp :key #'cadr)) ; sort by key value
-      (with-open-file (stream keys-path :direction :output :if-exists :supersede)
-        ;;(format stream "~s~%"
-        (write records :stream stream :escape t :pretty nil :readably t)))
-     (t
-      (with-open-file (stream keys-path :direction :input)
-        (setf records (read stream nil nil)))
-      (if (listp records)
-          (setf records (metadata-vector index t)))))
-    records))
-|#
 
 (defmethod ensure-searcher-open ((self index))
   (with-slots (open-p) self
