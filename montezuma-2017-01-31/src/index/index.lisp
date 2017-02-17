@@ -251,7 +251,12 @@
 (defgeneric reopen (index))
 
 (defmethod reopen ((self index))
-  (apply #'make-instance 'index (slot-value self 'reader)))
+  (with-slots (open-p) self
+    (close-down self)
+    (setf open-p t)
+    (ensure-reader-open self)
+    (ensure-writer-open self)))
+  ;;(apply #'make-instance 'index (slot-value self 'reader)))
 
 (defgeneric reader (index))
 
