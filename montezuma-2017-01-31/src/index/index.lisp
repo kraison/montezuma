@@ -471,7 +471,6 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
          (flush self)))
       t))))
 
-#|
 (defmethod bulk-add-documents ((self index) documents &key analyzer)
   (with-write-lock ((index-lock self))
     (with-writer (self)
@@ -483,7 +482,6 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
       (flush self)
       (optimize-index self)))
   t)
-|#
 
 ;; The main search method for the index. You need to create a query to
 ;; pass to this method. You can also pass a hash with one or more of
