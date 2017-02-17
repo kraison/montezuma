@@ -775,19 +775,25 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
       (bordeaux-threads:with-recursive-lock-held ((readers-lock self))
         (let ((reader (dequeue (readers self))))
           (when (or (null reader) (and reader (not (latest-p reader))))
-            (setq reader
+           (setq reader
                   (open-index-reader dir
                                      :close-directory-p NIL
                                      :id (next-reader-id))))
           (push reader in-use-readers)
           reader)))))
-
+#|
+(defmethod ensure-reader-open ((self index))
+  (with-slots (open-p) self
+    (unless open-p
+      (error "Tried to use a closed index."))
+    (get-reader self))
+#|
 (defmethod ensure-reader-open ((self index))
   (with-slots (open-p) self
     (unless open-p
       (error "Tried to use a closed index."))
     (gethash (bordeaux-threads:current-thread) (readers self))))
-#|
+
 (defmethod ensure-reader-open ((self index))
   (with-slots (open-p reader) self
     (unless open-p
