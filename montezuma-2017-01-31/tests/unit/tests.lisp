@@ -42,7 +42,8 @@
   (flet ((handle-test-success (value)
 	   (test-success name expr value expected-value))
 	 (handle-test-failure (value condition)
-	   (test-failure name expr value expected-value condition nil failure-thunk)))
+	   (test-failure name expr value expected-value condition nil failure-thunk)
+           (trivial-backtrace:print-backtrace condition)))
     (restart-case 
 	(handler-bind ((error #'maybe-fail-test))
 	  (let ((value (funcall test-thunk)))
@@ -52,7 +53,6 @@
       (fail-test (condition)
 	:report "Fail this test."
 	(handle-test-failure nil condition)))))
-
 
 (defun execute-condition-test-thunk (name expr test-thunk expected-condition comparator failure-thunk)
   (flet ((handle-test-success (condition)
