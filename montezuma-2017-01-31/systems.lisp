@@ -26,6 +26,10 @@
 (defparameter *etec-corpus* (merge-pathnames "/corpus/etec/" *corpus-root*))
 (defparameter *stop-words-directory* (merge-pathnames "../stop-words/" *working-directory*))
 (defparameter *stop-words* *stop-words-directory*)
+(defparameter *test-directory-path*
+  (make-pathname :name nil
+		 :type nil
+		 :defaults (merge-pathnames (make-pathname :directory '(:relative "tests" "unit" "temp" "fsdir")) *montezuma-root*)))
 
 (defparameter *pastes-index-pathname*
   (merge-pathnames "contrib/pastes-1000/pasteindex/" *working-directory*)
