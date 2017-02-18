@@ -69,7 +69,7 @@
        (:module "query-parser"
         :components ((:file "query-parser")
                      (:file "query-result"))
-        :depends-on ("package" "search"))
+        :depends-on ("package" "search" "util"))
        (:module "search"
         :components ((:file "api")
                      (:file "similarity" :depends-on ("api"))
