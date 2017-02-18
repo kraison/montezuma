@@ -85,8 +85,8 @@
       (format t "; Loading ~s: ~a~%" name path)
       (unless (probe-file path) (error "system definition file can't be found: ~a" path))
       (let ((*package* (find-package :asdf-user)))
-        (load path))
-      (asdf::compile-system name)
+        (load path)
+        (asdf::compile-system name :force t))
       (asdf::load-system name)
       (pushnew name *systems*))))
 
