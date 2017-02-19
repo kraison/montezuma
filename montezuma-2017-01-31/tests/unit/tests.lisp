@@ -43,7 +43,8 @@
 	   (test-success name expr value expected-value))
 	 (handle-test-failure (value condition)
 	   (test-failure name expr value expected-value condition nil failure-thunk)
-           (trivial-backtrace:print-backtrace condition)))
+           ;;(trivial-backtrace:print-backtrace condition) ; IT DOESN'T HELP!
+	))
     (restart-case 
 	(handler-bind ((error #'maybe-fail-test))
 	  (let ((value (funcall test-thunk)))
