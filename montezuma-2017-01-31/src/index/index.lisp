@@ -1100,8 +1100,8 @@ REANZ1959 no, no, no reader slot doesn't exist.
 (defmethod delete-from-cache ((index index) (term string))
   (let ((table (metadata-table index)))
     (if table
-        (remhash term table))))
-
+        (remhash (string-downcase term) table))))
+#|
 (defmethod delete-from-cache ((index index) (docnum integer))
   (let ((table (metadata-table index)))
     (if table
@@ -1110,13 +1110,36 @@ REANZ1959 no, no, no reader slot doesn't exist.
                (keyvalue (if field (field-data (document-field doc field)))))
           (if keyvalue
               (remhash (string-downcase keyvalue) table))))))
+|#
+
+(defmethod delete-from-cache ((index index) (docnum integer))
+  (let ((keyfield  (document-key index)))
+    (if keyfield
+        (let ((table (metadata-table index)))
+          (if table
+              (let* ((doc (get-document index docnum))
+                     (keyvalue (field-data (document-field doc keyfield))))
+                (if keyvalue
+                    (remhash (string-downcase keyvalue) table))))))))
+#|
+(defmethod delete-from-cache ((index index) (term term))
+  (let ((keyfield  (document-key index)))
+    (if keyfield
+	(let ((table (metadata-table index)))
+   	   (if table
+        	(let ((query (make-instance 'term-query :term term :index index)))
+          (dolist (docnum (get-document-numbers index query))
+            (delete-from-cache index docnum)))))))
+|#
 
 (defmethod delete-from-cache ((index index) (term term))
-  (let ((table (metadata-table index)))
-    (if table
-        (let ((query (make-instance 'term-query :term term :index index)))
-          (dolist (docnum (get-document-numbers index query))
-            (delete-from-cache index docnum))))))
+  (let ((keyfield (document-key index)))
+    (if keyfield
+	(let ((table (metadata-table index)))
+          (if table
+              (let ((query (make-instance 'term-query :term term :index index)))
+                (dolist (docnum (get-document-numbers index query))
+                  (delete-from-cache index docnum))))))))
 
 (defmethod add-to-cache ((index index) table docnum)
   ;; add a document identifie by its docnum to the cache
