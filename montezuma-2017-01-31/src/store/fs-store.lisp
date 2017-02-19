@@ -73,6 +73,7 @@
 
 (defmethod touch ((self fs-directory) file)
   (let ((file-path (full-path-for-file self file)))
+    (ensure-directories-exist file-path) ; added by REANZ1959
     (if (probe-file file-path)
 	;; FIXME: Set file-write-date.
 	nil
