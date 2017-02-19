@@ -5,6 +5,10 @@
 (defvar *trap-errors* T)
 (defvar *break-on-failure* T)
 
+(defun make-test-directory (subdirectory)
+  (let ((pathname (merge-pathnames subdirectory (merge-pathnames "tests/unit/index/temp/" *montezuma-root*))))
+    (ensure-directories-exist pathname)
+    pathname))
 
 ;; --------------------
 ;; Simple Tests
