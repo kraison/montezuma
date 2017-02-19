@@ -1,10 +1,14 @@
 (in-package #:montezuma)
 
+#|
+*test-directory-path* is now defined in systems.lisp REANZ1959
+
 (defparameter *test-directory-path*
   (make-pathname :name nil
 		 :type nil
 		 :defaults (merge-pathnames (make-pathname :directory '(:relative :up :up "temp" "fsdir"))
 					    *load-pathname*)))
+|#
 
 (deftestfun test-fs-store
   (let ((dir (make-fs-directory *test-directory-path* :create-p T)))
