@@ -46,10 +46,19 @@
 
 (defgeneric refresh (fs-directory))
 
+#|
 (defmethod refresh ((self fs-directory))
   ;; Delete all files
   (dolist (file (files self))
     (delete-directory-file self file))
+  ;; Remove all locks
+  )
+|#
+
+(defmethod refresh ((self fs-directory))
+  ;; Delete all files
+  (with-slots (path) self
+    (fad:delete-directory-and-files path))
   ;; Remove all locks
   )
 
