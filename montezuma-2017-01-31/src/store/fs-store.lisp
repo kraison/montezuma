@@ -176,6 +176,7 @@
 
 (defmethod initialize-instance :after ((self fs-index-output) &key path)
   (with-slots (file) self
+    (ensure-directories-exist path) ; make sure directories exist for index REANZ1959
     (setf file (open path
 		     :direction :output
 		     :element-type '(unsigned-byte 8)
