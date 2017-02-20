@@ -506,7 +506,7 @@
        (do-test-term-vectors ir)
        (close-down ir))))
   (:testfun test-ir-read-while-optimizing-on-disk
-   (let* ((fs-dir (make-fs-directory *test-directory-path* :create-p T))
+   (let* ((fs-dir (make-fs-directory (make-test-directory "fsdir/optimize/") :create-p T)) ; REANZ1959
 	  (iw (make-instance 'index-writer
 			     :directory fs-dir
 			     :analyzer (make-instance 'whitespace-analyzer)
@@ -526,7 +526,7 @@
 	 (close-down ir)
 	 (close-down fs-dir)))))
   (:testfun test-ir-latest
-   (let* ((fs-dir (make-fs-directory *test-directory-path* :create-p T))
+   (let* ((fs-dir (make-fs-directory (make-test-directory "ir/") :create-p T))
 	  (iw (make-instance 'index-writer
 			     :directory fs-dir
 			     :analyzer (make-instance 'whitespace-analyzer)

@@ -160,35 +160,35 @@
       (do-test-index-with-table index)
       (close-down index)))
   (:testfun test-fs-index
-    (let ((path *test-directory-path*))
+   (let ((path1 (make-test-directory "fs-index/")))
       (flet ((delete-test-index ()
-	       (cl-fad:delete-directory-and-files path :if-does-not-exist :ignore)))
+	       (cl-fad:delete-directory-and-files path1 :if-does-not-exist :ignore)))
 	(delete-test-index)
 	(condition-test
 	 fs-index-1
 	 (make-instance 'index
-			:path path
+			:path path1
 			:create-if-missing-p NIL
 			:default-field "def_field")
 	 'error)
 	(delete-test-index)
 	(let ((index (make-instance 'index
-				    :path path
+				    :path path1
 				    :create-p T
 				    :default-field "def_field")))
 	  (do-test-index-with-array index)
 	  (close-down index))
 	(delete-test-index)
 	(let ((index (make-instance 'index
-				    :path path
+				    :path path1
 				    :create-p T
 				    :default-field "def_field")))
 	  (do-test-index-with-table index)
 	  (close-down index)))))
   (:testfun test-fs-index-is-persistent
-    (let ((path *test-directory-path*))
+    (let ((path2 (make-test-directory "persists/")))
       (flet ((delete-test-index ()
-	       (cl-fad:delete-directory-and-files path :if-does-not-exist :ignore)))
+	       (cl-fad:delete-directory-and-files path2 :if-does-not-exist :ignore)))
 	(delete-test-index)
 	(let ((data '((("def_field" . "one two") (:id . "me"))
 		      (("def_field" . "one") (:field2 . "three"))
@@ -199,14 +199,14 @@
 		      (("def_field" . "one"))
 		      (("def_field" . "two") (:field2 . "three") ("field3" . "five"))))
 	      (index (make-instance 'index
-				    :path path
+				    :path path2
 				    :default-field "def_field")))
 	  (dolist (doc data)
 	    (add-document-to-index index doc))
 	  (test fs-index-is-persistent-1 (size index) 8)
 	  (close-down index))
 	(let ((index (make-instance 'index
-				    :path path
+				    :path path2
 				    :create-if-missing-p NIL)))
 	  (atest fs-index-is-persistent-2 (size index) 8)
 	  (atest fs-index-is-persistent-3
@@ -309,63 +309,64 @@
 		(test merging-indices-11 (document-values (get-document index 15) "f")
 		      "golf" #'string=)
 		(close-down index))))))))))))
+
   (:testfun test-persist-index
-    (cl-fad:delete-directory-and-files *test-directory-path* :if-does-not-exist :ignore)
-    (let ((index (make-instance 'index
-				:default-field "f")))
-      (let ((data '((("f" . "zero"))
-		    (("f" . "one"))
-		    (("f" . "two")))))
-	(dolist (doc data)
-	  (add-document-to-index index doc)))
-      (persist index *test-directory-path* :create-p T)
+   (let ((path3 (make-test-directory "fsdir/persist/")))
+     (cl-fad:delete-directory-and-files path3 :if-does-not-exist :ignore)
+     (let ((index (make-instance 'index :default-field "f")))
+       (let ((data '((("f" . "zero"))
+                     (("f" . "one"))
+                     (("f" . "two")))))
+         (dolist (doc data)
+           (add-document-to-index index doc)))
+       (persist index path3 :create-p T)
       (test persist-index-1 (size index) 3)
       (test persist-index-2 (document-values (get-document index 0) "f")
 	    "zero" #'string=)
       (close-down index))
-    (let ((index (make-instance 'index
-				:path *test-directory-path*)))
-      (test persist-index-3 (size index) 3)
-      (test persist-index-4 (document-values (get-document index 0) "f")
-	    "zero" #'string=)
-      (close-down index))
-    (let ((index (make-instance 'index
-				:default-field "f")))
-      (let ((data '((("f" . "romeo"))
-		    (("f" . "sierra"))
-		    (("f" . "tango")))))
-	(dolist (doc data)
-	  (add-document-to-index index doc)))
-      (test persist-index-5 (size index) 3)
-      (test persist-index-6 (document-values (get-document index 0) "f")
-	    "romeo" #'string=)
-      (let ((dir (make-fs-directory *test-directory-path* :create-p NIL)))
-	(persist index dir))
-      (test persist-index-7 (size index) 6)
-      (test persist-index-8 (document-values (get-document index 0) "f")
-	    "zero" #'string=)
-      (test persist-index-9 (document-values (get-document index 3) "f")
-	    "romeo" #'string=)
-      (close-down index))
-    (let ((index (make-instance 'index
-				:path *test-directory-path*)))
+     (let ((index (make-instance 'index :path path3)))
+       (test persist-index-3 (size index) 3)
+       (test persist-index-4 (document-values (get-document index 0) "f")
+             "zero" #'string=)
+       (close-down index))
+     (let ((index (make-instance 'index
+                                 :default-field "f")))
+       (let ((data '((("f" . "romeo"))
+                     (("f" . "sierra"))
+                     (("f" . "tango")))))
+         (dolist (doc data)
+           (add-document-to-index index doc)))
+       (test persist-index-5 (size index) 3)
+       (test persist-index-6 (document-values (get-document index 0) "f")
+             "romeo" #'string=)
+       (let ((dir (make-fs-directory path3 :create-p NIL)))
+         (persist index dir))
+       (test persist-index-7 (size index) 6)
+       (test persist-index-8 (document-values (get-document index 0) "f")
+             "zero" #'string=)
+       (test persist-index-9 (document-values (get-document index 3) "f")
+             "romeo" #'string=)
+       (close-down index))
+    (let ((index (make-instance 'index :path path3)))
       (test persist-index-10 (size index) 6)
       (test persist-index-11 (document-values (get-document index 0) "f")
 	    "zero" #'string=)
       (test persist-index-12 (document-values (get-document index 3) "f")
 	    "romeo" #'string=)
-      (close-down index)))
+      (close-down index))))
+
   (:testfun test-index-auto-update-when-externally-modified
-    (let ((index (make-instance 'index
-				:path *test-directory-path*
-				:default-field "f"
-				:create-p T)))
+   (let* ((path (make-test-directory "auto-update/"))
+          (index (make-instance 'index
+                                :path path
+                                :default-field "f"
+                                :create-p T)))
       (add-document-to-index index "document 1")
       (test index-auto-update-when-externally-modified-1
 	    (size index)
 	    1)
       (let ((index2 (make-instance 'index
-				   :path *test-directory-path*
+				   :path path
 				   :default-field "f")))
 	(test index-auto-update-when-externally-modified-2
 	      (size index2)
@@ -380,7 +381,7 @@
 	(let ((top-docs (search-index index (make-instance 'term-query :term (make-term "f" "content3")))))
 	  (test index-auto-update-when-externally-modified-5 (size top-docs) 0)
 	  (let ((iw (make-instance 'index-writer
-				   :directory *test-directory-path*
+				   :directory path
 				   :analyzer (make-instance 'whitespace-analyzer)))
 		(doc (make-instance 'document)))
 	    (add-field doc (make-field "f" "content3" :stored T :index :tokenized))

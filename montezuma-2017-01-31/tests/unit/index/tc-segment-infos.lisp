@@ -43,12 +43,6 @@
 	    (test segment-infos-11 (segment-info sis3 0) seg0 #'segment-info=)
 	    (test segment-infos-12 (segment-info sis3 3) seg3 #'segment-info=)))))))
 
-(defparameter *test-directory-path*
-  (make-pathname :name nil
-		 :type nil
-		 :defaults (merge-pathnames (make-pathname :directory '(:relative :up :up "temp" "fsdir"))
-					    *load-pathname*)))
-
 (deftestfun test-segment-info
   (let ((dir (make-instance 'ram-directory)))
     (let ((si (make-instance 'segment-info
@@ -59,7 +53,7 @@
       (test segment-info-2 (doc-count si) 0)
       (test segment-info-3 (segment-info-name si) "seg1" #'string=)
       (close-down dir)
-      (let ((dir (make-fs-directory *test-directory-path* :create-p T)))
+      (let ((dir (make-fs-directory (make-test-directory "segment-info/") :create-p T)))
 	(setf (segment-info-name si) "seg2")
 	(incf (doc-count si) 2)
 	(setf (segment-directory si) dir)
