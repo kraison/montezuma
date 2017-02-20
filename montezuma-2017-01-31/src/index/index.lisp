@@ -1114,11 +1114,13 @@ REANZ1959 no, no, no reader slot doesn't exist.
       (values metadata (hash-table-count metadata)))))
 
 (defun metadata-vector (index)
+  "Return an array of document metadata sorted by key values, or nil if no document key"
   (unless (is-ram-directory index)
     (let ((table (metadata-table index))
           (records (make-array (size index) :element-type 'list :fill-pointer 0 :adjustable t)))
-      (loop for value being the hash-value of table do
-            (vector-push-extend value records))
+      (loop for list-of-records being the hash-value of table do
+            (dolist (record list-of-records)
+              (vector-push-extend record records)))
       (sort records #'string-lessp :key #'cadr)))) ; sort by key value
 
 (defun stress (index &key cache)
