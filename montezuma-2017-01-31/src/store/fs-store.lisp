@@ -9,6 +9,7 @@
   (when create-p
     (ensure-directories-exist path))
   (let ((truename (truename path)))
+    (format t "make-fs-directory ~s create-p ~a~%" truename create-p)
     (let ((dir (gethash truename *directory-cache*)))
       (unless dir
 	(setf dir (make-instance 'fs-directory :path path))
@@ -46,15 +47,6 @@
 
 (defgeneric refresh (fs-directory))
 
-#|
-(defmethod refresh ((self fs-directory))
-  ;; Delete all files
-  (dolist (file (files self))
-    (delete-directory-file self file))
-  ;; Remove all locks
-  )
-|#
-
 (defmethod refresh ((self fs-directory))
   ;; Delete all files
   (with-slots (path) self
@@ -73,12 +65,12 @@
 
 (defmethod touch ((self fs-directory) file)
   (let ((file-path (full-path-for-file self file)))
-    (ensure-directories-exist file-path) ; added by REANZ1959
+    (ensure-directories-exist file-path)
     (if (probe-file file-path)
 	;; FIXME: Set file-write-date.
 	nil
-	(with-open-file (f file-path :direction :output :if-does-not-exist :create)
-	  (declare (ignorable f))))))
+      (with-open-file (f file-path :direction :output :if-does-not-exist :create)
+        (declare (ignorable f))))))
 
 (defmethod delete-directory-file ((self fs-directory) file)
   (cl:delete-file (full-path-for-file self file)))
@@ -177,7 +169,7 @@
 
 (defmethod initialize-instance :after ((self fs-index-output) &key path)
   (with-slots (file) self
-    (ensure-directories-exist path) ; make sure directories exist for index REANZ1959
+    (ensure-directories-exist path)
     (setf file (open path
 		     :direction :output
 		     :element-type '(unsigned-byte 8)
