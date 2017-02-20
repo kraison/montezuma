@@ -41,6 +41,19 @@
   (cl-ppcre:split "\\s+" (file-contents path)))
 
 (defun load-language-stop-words (language)
+  (unless *stop-words-directory*
+    (warn "*STOP-WORDS-DIRECTORY* is NIL, no words loaded"))
+  (let ((stop-words-file (make-pathname :name language
+                                        :type "txt"
+                                        :defaults *stop-words-directory*)))
+    (if (probe-file stop-words-file)
+        (load-word-list stop-words-file)
+      (warn "Stop words file ~A does not exist, no words loaded"
+            stop-words-file))))
+#|
+Tweaked by REANZ1959
+
+(defun load-language-stop-words (language)
   (cond ((not *stop-words-directory*)
          (warn "*STOP-WORDS-DIRECTORY* is NIL, no words loaded"))
         (t
@@ -51,6 +64,7 @@
                (load-word-list stop-words-file)
                (warn "Stop words file ~A does not exist, no words loaded"
                      stop-words-file))))))
+|#
 
 (defclass text-filter (stop-filter)
   ())
