@@ -6,7 +6,8 @@
 (defvar *break-on-failure* T)
 
 (defun make-test-directory (subdirectory)
-  (let ((pathname (merge-pathnames subdirectory (merge-pathnames "tests/unit/index/temp/" *montezuma-root*))))
+  (let* ((dir (merge-pathnames "tests/unit/index/temp/" *montezuma-root*))
+         (pathname (merge-pathnames subdirectory dir)))
     (ensure-directories-exist pathname)
     pathname))
 
@@ -42,13 +43,15 @@
   (when (and *trap-errors* (not (typep condition 'test-failure)))
     (fail-test condition)))
 
+
 (defun execute-test-thunk (name expr test-thunk expected-value comparator failure-thunk)
   (flet ((handle-test-success (value)
 	   (test-success name expr value expected-value))
 	 (handle-test-failure (value condition)
+           (break "~&Test failure: ~a, expression ~s, got ~a, wanted ~a" name expr expected-value value)
 	   (test-failure name expr value expected-value condition nil failure-thunk)
-           ;;(trivial-backtrace:print-backtrace condition) ; IT DOESN'T HELP!
-	))
+           ;;(trivial-backtrace:print-backtrace condition)
+           ))
     (restart-case 
 	(handler-bind ((error #'maybe-fail-test))
 	  (let ((value (funcall test-thunk)))
