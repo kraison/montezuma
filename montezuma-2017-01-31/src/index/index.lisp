@@ -417,67 +417,6 @@
 
 (defgeneric add-document-to-index (index doc &key overwrite analyzer))
 
-#| darn it! We weren't adding documents unless the index had uniqueness REANZ1959
-(defmethod add-document-to-index ((self index) doc &key (overwrite t) (uniqueness nil) analyzer
-                                                     no-flush-p)
-  "Add DOC to index. If overwrite, delete any documents with the same key value.
-Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don't add DOC."
-  (let ((fdoc nil)
-        (key (document-key self))
-	(default-field (slot-value self 'default-field)))
-    (when (listp doc)
-      ;; Turn association lists into something we can treat like any
-      ;; other table (including hash tables).
-      (setf doc (convert-alist-to-table doc)))
-    (cond ((stringp doc)
-	   (setf fdoc (make-instance 'document))
-	   (add-field fdoc (make-field default-field doc
-				       :stored T :index :tokenized)))
-	  ((typep doc 'array)
-	   (setf fdoc (make-instance 'document))
-	   (dosequence (field doc)
-	     (add-field fdoc (make-field default-field field
-					 :stored T :index :tokenized))))
-	  ((table-like-p doc)
-	   (setf fdoc (make-instance 'document))
-	   (dolist (field (table-keys doc))
-	     (let ((text (table-value doc field)))
-	       (add-field fdoc (make-field (string field) (stringify text)
-                                           :stored T :index :tokenized)))))
-	  ((typep doc 'document)
-	   (setf fdoc doc))
-	  (T
-	   (error "Unknown document type ~S" doc)))
-
-    ;; Delete existing documents with the same key, if overwrite.
-    (with-write-lock ((index-lock self))
-      (when uniqueness
-        (when key
-          (let* ((key-value (get-document-field-data fdoc key))
-                 (query (make-key-field-query self key-value)))
-            (cond
-             (overwrite
-              (delete-from-cache self key-value)
-              (query-delete self query))
-             ((exists-p self query)
-              (return-from add-document-to-index)))))
-      (with-writer
-       (self)
-       (setf (slot-value self 'has-writes-p) T)
-       (add-document-to-index-writer (slot-value self 'writer) fdoc
-                                     (if analyzer analyzer (analyzer writer)))
-       (let* ((keyvalue (if key (get-document-field-data fdoc (document-key self))))
-              (table (metadata self)))
-          (when (and table keyvalue)
-            (loop
-             for (docnum) in (search-for-keyvalue self keyvalue) do
-             (add-to-cache self table docnum))))
-       (when (and (slot-value self 'auto-flush-p)
-                  (not no-flush-p))
-         (flush self)))
-      t))))
-|#
-
 (defmethod add-document-to-index ((self index) doc &key (overwrite t) (uniqueness nil) analyzer
                                                      no-flush-p)
   "Add DOC to index. If overwrite, delete any documents with the same key value.
@@ -854,7 +793,6 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
       (error "Tried to use a closed index."))
     (get-reader self)))
 
-
 #|
 REANZ1959 I think the version using get-reader is best.
 (defmethod ensure-reader-open ((self index))
@@ -1101,16 +1039,6 @@ REANZ1959 no, no, no reader slot doesn't exist.
   (let ((table (metadata-table index)))
     (if table
         (remhash (string-downcase term) table))))
-#|
-(defmethod delete-from-cache ((index index) (docnum integer))
-  (let ((table (metadata-table index)))
-    (if table
-        (let* ((doc (get-document index docnum))
-               (field (document-key index))
-               (keyvalue (if field (field-data (document-field doc field)))))
-          (if keyvalue
-              (remhash (string-downcase keyvalue) table))))))
-|#
 
 (defmethod delete-from-cache ((index index) (docnum integer))
   (let ((keyfield  (document-key index)))
@@ -1121,16 +1049,6 @@ REANZ1959 no, no, no reader slot doesn't exist.
                      (keyvalue (field-data (document-field doc keyfield))))
                 (if keyvalue
                     (remhash (string-downcase keyvalue) table))))))))
-#|
-(defmethod delete-from-cache ((index index) (term term))
-  (let ((keyfield  (document-key index)))
-    (if keyfield
-	(let ((table (metadata-table index)))
-   	   (if table
-        	(let ((query (make-instance 'term-query :term term :index index)))
-          (dolist (docnum (get-document-numbers index query))
-            (delete-from-cache index docnum)))))))
-|#
 
 (defmethod delete-from-cache ((index index) (term term))
   (let ((keyfield (document-key index)))
