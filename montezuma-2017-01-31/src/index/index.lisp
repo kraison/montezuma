@@ -488,6 +488,19 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
       (optimize-index self)))
   t)
 
+;;;; Warning: untested code REANZ1959
+(defmethod bulk-addition ((self index) document-function &key analyzer)
+  (with-write-lock ((index-lock self))
+    (with-writer (self)
+      (loop
+       for fdoc = (funcall document-function) do
+       (setf (slot-value self 'has-writes-p) T)
+       (add-document-to-index-writer writer fdoc (or analyzer (analyzer writer)))))
+    (when (slot-value self 'auto-flush-p)
+      (flush self)
+      (optimize-index self)))
+  t)
+
 ;; The main search method for the index. You need to create a query to
 ;; pass to this method. You can also pass a hash with one or more of
 ;; the following; {filter, num_docs, first_doc, sort}
