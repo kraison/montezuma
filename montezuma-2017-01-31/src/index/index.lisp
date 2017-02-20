@@ -990,6 +990,7 @@ REANZ1959 no, no, no reader slot doesn't exist.
   (and *cache-enabled*
        index
        (not (is-ram-directory index))
+       (document-key index)
        (string-equal (document-key index) field)))
 
 (defmethod key-term-documents ((index index) (text string))
