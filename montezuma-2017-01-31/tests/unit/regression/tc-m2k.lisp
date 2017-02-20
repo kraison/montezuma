@@ -30,18 +30,6 @@
 
 (in-package #:montezuma)
 
-(defvar *tc-m2k-test-index-path*
-  (merge-pathnames
-   (make-pathname :directory '(:relative "tc-m2k-test-index"))
-   (make-pathname :name nil
-		  :type nil
-		  :defaults *load-pathname*)))
-(defvar *tc-m2k-test-corpus-path*
-  (merge-pathnames
-   (make-pathname :directory '(:relative "tc-m2k-test-corpus"))
-   (make-pathname :name nil
-		  :type nil
-		  :defaults *load-pathname*)))
 (defvar *tc-m2k-test-index* nil)
 (defvar *tc-m2k-test-field* "contents")
 (defvar *tc-m2k-test-verbose* t)
@@ -87,10 +75,9 @@
     (ensure-directories-exist (make-pathname :defaults path))
     (with-open-file
 	(out (merge-pathnames
-	      (make-pathname :defaults *tc-m2k-test-corpus-path*)
-	      (make-pathname :name     filename
-			     :type     "txt"))
-	     :direction    :output
+	      (make-pathname :defaults (make-test-directory "fsdir/tc-m2k-test-corpus/"))
+	      (make-pathname :name filename :type "txt"))
+             :direction    :output
 	     :if-exists    :supersede
 	     :element-type '(unsigned-byte 8))
       (loop for int across contents do
@@ -109,7 +96,7 @@
   (cl-fad:delete-directory-and-files index-path 
 				     :if-does-not-exist :ignore)
   (let ((filelist (cl-fad:list-directory corpus-path))
-	(index (make-instance 'montezuma::index :path index-path)))
+	(index (make-instance 'index :path index-path)))
     (dolist (corpus-path filelist)
       (handler-case
 	  (let ((this (make-instance 'document)))
@@ -141,16 +128,21 @@
 
 (defun tc-m2k-write-index-search ()
   "Write test files, index them and perform a search."
-  (let ((parser (make-instance 'query-parser :default-field *tc-m2k-test-field* :default-occur 'default-occur)))
-    (tc-m2k-write-test-files *tc-m2k-test-corpus-path*)
-    (when *tc-m2k-test-verbose*
-      (format t "~&searching..~%"))
-    (search-each
-     (tc-m2k-index-docs-from-disk *tc-m2k-test-corpus-path* *tc-m2k-test-index-path*)
-     (query (montezuma-parse parser *tc-m2k-test-term*))
-     #'(lambda (doc score)
-         (when *tc-m2k-test-verbose* (format t "~&doc ~S, score ~S~%" doc score))))
-
+  (let* ((parser (make-instance 'query-parser :default-field *tc-m2k-test-field* :default-occur 'default-occur))
+         (root (make-test-directory "fsdir/"))
+         (tc-m2k-test-corpus-path (merge-pathnames "tc-m2k-test-corpus/" root))
+         (tc-m2k-test-index-path (merge-pathnames "tc-m2k-test-index/" root)))
+    (tc-m2k-write-test-files tc-m2k-test-corpus-path)
+    (let ((index (tc-m2k-index-docs-from-disk tc-m2k-test-corpus-path tc-m2k-test-index-path))
+          (query (query (montezuma-parse parser *tc-m2k-test-term*))))
+      (format t "test index: ~d documents~%query: ~a" (size index) query)
+      (when *tc-m2k-test-verbose*
+        (format t "~&searching..~%"))
+      (search-each
+       index
+       query
+       #'(lambda (doc score)
+           (when *tc-m2k-test-verbose* (format t "~&doc ~S, score ~S~%" doc score)))))
     t))
 
 (deftestfun test-m2k-issue
