@@ -466,11 +466,12 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
        (add-document-to-index-writer (slot-value self 'writer) fdoc
                                      (if analyzer analyzer (analyzer writer)))
        (let* ((keyvalue (if key (get-document-field-data fdoc (document-key self))))
-              (table (metadata self)))
-          (when (and table keyvalue)
-            (loop
-             for (docnum) in (search-for-keyvalue self keyvalue) do
-             (add-to-cache self table docnum))))
+              (table (metadata-table self))) ;; this is a major performance hit!!!
+         (break "Updating cache with keyvalue ~a table: ~s~%" keyvalue table)
+         (when (and table keyvalue)
+           (loop
+            for (docnum) in (search-for-keyvalue self keyvalue) do
+            (add-to-cache self table docnum))))
        (when (and (slot-value self 'auto-flush-p)
                   (not no-flush-p))
          (flush self)))
@@ -488,7 +489,6 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
       (optimize-index self)))
   t)
 
-;;;; Warning: untested code REANZ1959
 (defmethod bulk-addition ((self index) document-function &key analyzer)
   (with-write-lock ((index-lock self))
     (with-writer (self)
@@ -691,7 +691,7 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
 (defgeneric has-writes (index))
 
 (defmethod has-writes ((self index))
-  (slot-value self 'has-writes))
+  (slot-value self 'has-writes-p))
 
 (defmethod close-all-readers ((self index))
   (with-slots (readers readers-lock) self
@@ -999,12 +999,14 @@ REANZ1959 no, no, no reader slot doesn't exist.
          (return-from get-document-number-from-query docnum)))
     -1))
 
+#|
 (defmethod cached ((index t) (field string))
   (and *cache-enabled*
        index
        (not (is-ram-directory index))
        (document-key index)
        (string-equal (document-key index) field)))
+|#
 
 (defmethod key-term-documents ((index index) (text string))
   (let ((cache (metadata index)))
@@ -1079,7 +1081,8 @@ REANZ1959 no, no, no reader slot doesn't exist.
          (field-names (all-field-names doc)))
     (flet ((extract (name)
              (if (find name field-names :test #'string-equal)
-                 (field-data (document-field doc name)))))
+                 (let ((value (field-data (document-field doc name))))
+                   (if value (string-trim '(#\space) value))))))
       (let* ((key (extract (document-key index)))
              (entry-key (string-downcase key)))
         (setf (gethash entry-key table)
@@ -1091,37 +1094,40 @@ REANZ1959 no, no, no reader slot doesn't exist.
 
 (defmethod metadata ((index index))
   "Are we caching metadata?"
-  (if *cache-enabled*
-      (let ((metadata (metadata-cache index)))
-        (and metadata
-             (trivial-garbage:weak-pointer-p metadata)
-             (trivial-garbage:weak-pointer-value metadata)))))
+  (if (and *cache-enabled*
+           (document-key index)
+           (not (is-ram-directory index)))
+      (values t
+              (let ((metadata (metadata-cache index)))
+                (and metadata
+                     (trivial-garbage:weak-pointer-p metadata)
+                     (trivial-garbage:weak-pointer-value metadata))))))
 
 (defmethod metadata-table ((index index))
-  (unless (is-ram-directory index)
-    (let ((metadata (metadata index)))
-      (unless metadata
-        (with-slots (metadata-cache) index
-          (let ((maxdocs (max-doc (searcher index))))
-            (setf metadata (make-hash-table :test #'equal))
-            (format t "~%;; Building metadata cache" *standard-output*)
-            (loop
-             for docnum from 0 upto (1- maxdocs)
-             unless (deleted-p index docnum) do
-             ;;(format t "metadata-table docnum ~d~%" docnum)
-             (add-to-cache index metadata docnum))
-            (setf metadata-cache (trivial-garbage:make-weak-pointer metadata)))))
-      (values metadata (hash-table-count metadata)))))
+  (multiple-value-bind (caching metadata) (metadata index)
+    (when caching
+      (when (or (null metadata) (has-writes index))
+        (let ((maxdocs (max-doc (searcher index))))
+          (setf metadata (make-hash-table :test #'equal))
+          (format t "~%;; Building metadata cache" *standard-output*)
+          (loop
+           for docnum from 0 upto (1- maxdocs)
+           unless (deleted-p index docnum) do
+           (add-to-cache index metadata docnum))
+          (setf (metadata-cache index) (trivial-garbage:make-weak-pointer metadata)))))
+    metadata))
 
 (defun metadata-vector (index)
   "Return an array of document metadata sorted by key values, or nil if no document key"
-  (unless (is-ram-directory index)
-    (let ((table (metadata-table index))
-          (records (make-array (size index) :element-type 'list :fill-pointer 0 :adjustable t)))
-      (loop for list-of-records being the hash-value of table do
-            (dolist (record list-of-records)
-              (vector-push-extend record records)))
-      (sort records #'string-lessp :key #'cadr)))) ; sort by key value
+  (multiple-value-bind (caching metadata) (metadata index)
+    (with-reader (index)
+      (when caching
+        (setf metadata (metadata-table index))
+        (let ((records (make-array (num-docs reader) :element-type 'list :fill-pointer 0 :adjustable t)))
+          (loop for list-of-records being the hash-value of metadata do
+                (dolist (record list-of-records)
+                  (vector-push-extend record records)))
+          (sort records #'string-lessp :key #'cadr)))))) ; sort by key value
 
 (defun stress (index &key cache)
   (let ((keys ())
