@@ -32,12 +32,12 @@
   (wrap self 80))
 
 (defmethod make-document-result ((index index) (docnum integer) (score real) &optional doc)
-  (unless (minusp docnum)
+  "Return a document-result unless docnum is negative or document has been deleted"
+  (unless (or (minusp docnum) (deleted-p index docnum))
     (make-instance 'document-result
                    :docnum docnum
                    :score score
                    :fields (field-values index (or doc (get-document index docnum))))))
-
 
 (defmethod make-document-result-from-document ((document document) (docnum integer) (score real))
   ;;(break "make-document-result-from-document ~s" (all-fields document))
