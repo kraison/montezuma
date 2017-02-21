@@ -1081,7 +1081,7 @@ REANZ1959 no, no, no reader slot doesn't exist.
 
 (defmethod flush-metadata ((self index))
   (setf (metadata-cache self) nil)
-  (let ((path (index-keys-metadata-path self)))
+  (let ((path (metadata-path self)))
     (if (probe-file path)
         (delete-file path))))
 
