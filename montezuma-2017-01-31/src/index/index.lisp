@@ -71,10 +71,16 @@
    (document-key :initform nil :accessor document-key :documentation "a field name that uniquely identifies documents")
    (dir :initform nil :accessor dir :documentation "index directory. Not necessarily document root.")
    (has-writes-p :initform NIL)
-   (reader :initform nil)
+   (lock :initform (make-rw-lock) :accessor lock)
+   (max-readers :initform 10 :initarg :max-readers :accessor max-readers)
+   (readers :initform (make-queue) :accessor readers)
+   (in-use-readers :initform nil :accessor in-use-readers)
+   (readers-semaphore :initform (bt-semaphore:make-semaphore :count 10) :reader readers-semaphore)
+   (readers-lock :initform (bordeaux-threads:make-recursive-lock) :accessor readers-lock)
+   (index-lock :initform (make-rw-lock) :accessor index-lock)
    (writer)
    (close-dir-p)
-   (auto-flush-p)
+   (auto-flush-p :initform t :accessor auto-flush-p :initarg :auto-flush-p)
    (default-search-field :initform "*" :accessor default-search-field)
    (document-title :initform nil :initarg :document-title :accessor document-title)
    (default-field)
@@ -109,7 +115,7 @@
     (format stream "dir: ~S~%" (if (slot-boundp self 'dir) (index-directory (dir self))));(if (and (dir self) (path (dir self))) (princ-to-string (path (dir self)))))
     (format stream "documentroot: ~s~%" (document-root self))
     ;;(format stream "abridgement-threshold: ~s~%" (abridgement-threshold self))
-    (format stream "field-definitions:~%")            
+    (format stream "field-definitions:~%")
     (dolist (fd (field-definitions self))
       (format stream "  ~{~s ~}~%" fd))
     (format stream "document-key: ~S" (document-key self))
@@ -144,10 +150,14 @@
     (setf (get-index-option options :create-if-missing-p)
 	  (get-index-option options :create-if-missing-p T))
     ;; FIXME: I don't flatten the :key option, I'm not sure why Ferret does.
-    (with-slots (index-key document-key dir options close-dir-p auto-flush-p analyzer writer
+    (with-slots (index-key document-key dir options close-dir-p ; auto-flush-p
+                           analyzer writer
                            default-search-field default-field document-root
                      field-definitions ;; abridgement-threshold
+                     max-readers readers-semaphore
                      retrieved-fields title url name language) self
+      (setf readers-semaphore (bt-semaphore:make-semaphore :count max-readers))
+
       (setf index-key (get-index-option options :index-key))
       (setf document-key (get-index-option options :document-key))
 
@@ -175,7 +185,7 @@
       (setf (get-index-option options :create-p) NIL)
       (setf close-dir-p (get-index-option options :close-directory-p))
       (setf (get-index-option options :close-directory-p) NIL)
-      (setf auto-flush-p (get-index-option options :auto-flush-p))
+      ;;(setf auto-flush-p (get-index-option options :auto-flush-p))
       (setf default-search-field (or (get-index-option options :default-search-field)
 				     (get-index-option options :default-field)
 				     "*"))
@@ -229,25 +239,32 @@
         (setf *montezuma-indexes* `(,@*montezuma-indexes* ,self))))))
 
 (defmethod close-down ((self index))
-  (with-slots (open-p reader writer dir) self
-    (when (not open-p)
-      (error "Tried to close an already closed directory."))
-    (when reader (close-down reader))
-    (when writer (close-down writer))
-    (close-down dir)
-    (setf open-p NIL)))
+  (with-slots (open-p writer dir index-lock) self
+    (with-write-lock (index-lock)
+      (when (not open-p)
+        (error "Tried to close an already closed directory."))
+      (close-all-readers self)
+      (when writer (close-down writer))
+      (close-down dir)
+      (setf open-p NIL))))
 
 (defgeneric reopen (index))
 
 (defmethod reopen ((self index))
-  (apply #'make-instance 'index (slot-value self 'reader)))
+  (with-slots (open-p) self
+    (close-down self)
+    (setf open-p t)
+    (ensure-reader-open self)
+    (ensure-writer-open self)))
+  ;;(apply #'make-instance 'index (slot-value self 'reader)))
 
 (defgeneric reader (index))
 
 (defmethod reader ((self index))
-  (ensure-reader-open self)
-  (slot-value self 'reader))
-              
+  (ensure-reader-open self))
+  ;;(slot-value self 'reader))
+  ;;(gethash (bordeaux-threads:current-thread) (readers self)))
+
 (defgeneric field-definition (index name))
 
 (defmethod field-is-defined ((self index) name)
@@ -257,7 +274,7 @@
   (cdr (assoc name (field-definitions self) :test #'string-equal)))
 
 (defgeneric field-definition-aspect (index name aspect))
-              
+
 (defmethod field-definition-aspect ((self index) name aspect)
   (cadr (member aspect (field-definition self name))))
 
@@ -278,7 +295,7 @@
   (field-definition-aspect self name :stored))
 
 (defgeneric field-abridged (index name))
-              
+
 (defmethod field-abridged ((self index) name)
   (field-definition-aspect self name :abridged))
 
@@ -288,7 +305,7 @@
 |#
 
 (defgeneric field-path-field (index name))
-              
+
 (defmethod field-path-field ((self index) name)
   (field-definition-aspect self name :path))
 
@@ -301,7 +318,7 @@
     (if path (fad:merge-pathnames-as-file (document-root self) path))))
 
 (defgeneric field-defined-type (index name))
-              
+
 (defmethod field-defined-type ((self index) name)
   (let ((type (field-definition-aspect self name :type)))
     (if type
@@ -309,7 +326,7 @@
       t)))
 
 (defgeneric field-defined-form (index name))
-              
+
 (defmethod field-defined-form ((self index) name)
   (field-definition-aspect self name :form))
 
@@ -341,7 +358,8 @@
 
 (defmethod searcher ((self index))
   (ensure-searcher-open self)
-  (slot-value self 'searcher))
+  ;;(slot-value self 'searcher)
+  )
 
 (defgeneric writer (index))
 
@@ -349,19 +367,62 @@
   (ensure-writer-open self)
   (slot-value self 'writer))
 
-(defmethod exists-p ((self index) query)
-  (search-each (searcher self) query
-               #'(lambda (doc score)
-                   (declare (ignore score))
-                   (return-from exists-p doc)))
-  nil)
+(defmacro with-reader ((index) &body body)
+  (with-gensyms (i)
+    `(let ((,i ,index))
+       (with-read-lock ((index-lock ,i))
+         (let ((reader (reader ,i)))
+           (unwind-protect
+                (progn ,@body)
+             (release-reader ,i reader)))))))
+
+(defmacro with-searcher ((index) &body body)
+  (with-gensyms (i)
+    `(let ((,i ,index))
+       (with-read-lock ((index-lock ,i))
+         (let ((searcher (searcher ,i)))
+           (unwind-protect
+                (progn ,@body)
+             (release-reader ,i (reader searcher))))))))
+
+(defmacro with-writer ((index) &body body)
+  (with-gensyms (i)
+    `(let ((,i ,index))
+       (with-write-lock ((index-lock ,i))
+         (let ((writer (writer ,i)))
+           (progn ,@body))))))
+;;           (unwind-protect
+;;                (progn ,@body)
+;;             (close-down writer)))))))
+
+(defmacro with-modifier ((index) &body body)
+  (with-gensyms (i)
+    `(let ((,i ,index))
+       (with-write-lock ((index-lock ,i))
+         (let ((modifier (reader ,i)))
+           (unwind-protect
+                (progn ,@body)
+             ;;(release-reader ,i modifier)))))))
+             (release-modifying-reader ,i modifier)))))))
+
+(defmacro with-modifying-searcher ((index) &body body)
+  (with-gensyms (i)
+    `(let ((,i ,index))
+       (with-write-lock ((index-lock ,i))
+         (let ((searcher (searcher ,i)))
+           (unwind-protect
+                (progn ,@body)
+             ;;(release-reader ,i (reader searcher))))))))
+             (release-modifying-reader ,i (reader searcher))))))))
 
 (defgeneric add-document-to-index (index doc &key overwrite analyzer))
 
-(defmethod add-document-to-index ((self index) doc &key (overwrite t) (uniqueness nil) analyzer)
-  "Add DOC to index. If overwrite, delete any documents with the same key value. 
+(defmethod add-document-to-index ((self index) doc &key (overwrite t) (uniqueness nil) analyzer
+                                                     no-flush-p)
+  "Add DOC to index. If overwrite, delete any documents with the same key value.
 Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don't add DOC."
   (let ((fdoc nil)
+        (key (document-key self))
 	(default-field (slot-value self 'default-field)))
     (when (listp doc)
       ;; Turn association lists into something we can treat like any
@@ -381,50 +442,69 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
 	   (dolist (field (table-keys doc))
 	     (let ((text (table-value doc field)))
 	       (add-field fdoc (make-field (string field) (stringify text)
-					  :stored T :index :tokenized)))))
+                                           :stored T :index :tokenized)))))
 	  ((typep doc 'document)
 	   (setf fdoc doc))
 	  (T
 	   (error "Unknown document type ~S" doc)))
 
     ;; Delete existing documents with the same key, if overwrite.
-    (when uniqueness
-      (let ((key (slot-value self 'document-key)))
+    (with-write-lock ((index-lock self))
+      (when uniqueness
         (when key
           (let* ((key-value (get-document-field-data fdoc key))
                  (query (make-key-field-query self key-value)))
-            (if overwrite
-                (progn
-                  (delete-from-cache self key-value)
-                  (query-delete self query))
-              (if (exists-p self query)
-                  (return-from add-document-to-index nil)))))))
+            (cond
+             (overwrite
+              (flush-metadata self)
+              ;;(delete-from-cache self key-value)
+              (query-delete self query))
+             ((exists-p self query)
+              (return-from add-document-to-index))))))
+      (with-writer
+       (self)
+       (setf (slot-value self 'has-writes-p) T)
+       (add-document-to-index-writer (slot-value self 'writer) fdoc
+                                     (if analyzer analyzer (analyzer writer)))
+       (flush-metadata self)
+       #|
+       (let* ((keyvalue (if key (get-document-field-data fdoc (document-key self))))
+              (table (metadata-table self))) ;; this is a major performance hit!!!
+         (with-reader (self)
+           ;;(break "Updating cache with keyvalue ~a table: ~s~%" keyvalue table)
+           (when (and table keyvalue)
+             (loop
+              for (docnum) in (search-for-keyvalue self keyvalue) do
+              (add-to-cache self table docnum reader))))
+         |#
+       (when (and (slot-value self 'auto-flush-p)
+                  (not no-flush-p))
+         (flush self)))
+      t)))
 
-    (let ((writer (writer self)))
-      (setf (slot-value self 'has-writes-p) T)
-      (add-document-to-index-writer (slot-value self 'writer) fdoc
-				    (if analyzer analyzer (analyzer writer)))
-      (let* ((key (slot-value self 'document-key))
-             (keyvalue (if key (get-document-field-data fdoc key)))
-             (table (metadata self)))
-        (when (and table keyvalue)
-          (loop
-           for (docnum) in (search-for-keyvalue self keyvalue) do
-           (add-to-cache self table docnum))))
+(defmethod bulk-add-documents ((self index) documents &key analyzer)
+  (with-write-lock ((index-lock self))
+    (with-writer (self)
+      (dolist (fdoc documents)
+        (setf (slot-value self 'has-writes-p) T)
+        (add-document-to-index-writer (slot-value self 'writer) fdoc
+                                      (if analyzer analyzer (analyzer writer)))))
+    (when (slot-value self 'auto-flush-p)
+      (flush self)
+      (optimize-index self)))
+  t)
 
-      (when (slot-value self 'auto-flush-p)
-	(flush self)))
-    t))
-
-(defmethod search-document-and-scores ((index index) query)
-  (let ((results ()))
-    (search-each
-     (searcher index) query
-     #'(lambda(docnum score) (push (list docnum score) results)))
-    results))
-
-(defmethod search-for-keyvalue ((index index) (keyvalue string))
-  (search-document-and-scores index (make-key-field-query index keyvalue)))
+(defmethod bulk-addition ((self index) document-function &key analyzer)
+  (with-write-lock ((index-lock self))
+    (with-writer (self)
+      (loop
+       for fdoc = (funcall document-function) do
+       (setf (slot-value self 'has-writes-p) T)
+       (add-document-to-index-writer writer fdoc (or analyzer (analyzer writer)))))
+    (when (slot-value self 'auto-flush-p)
+      (flush self)
+      (optimize-index self)))
+  t)
 
 ;; The main search method for the index. You need to create a query to
 ;; pass to this method. You can also pass a hash with one or more of
@@ -459,15 +539,28 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
           (return)))
     (total-hits hits)))
 
-(defmethod get-document ((self index) id)
-  (let ((reader (reader self)))
-    (typecase id
-      (string
-       (get-document-with-term reader (make-term "id" id)))
-      (term
-       (get-document-with-term reader id))
-      (T
-       (get-document reader id)))))
+(defmethod exists-p ((self index) query)
+  (with-searcher (self)
+    (search-each searcher query
+                 #'(lambda (doc score)
+                     (declare (ignore score))
+                     (return-from exists-p doc))))
+  nil)
+
+(defmethod get-document ((self index) id &key reader)
+  (flet ((get-it (r)
+           (typecase id
+             (string
+              (get-document-with-term r (make-term "id" id)))
+             (term
+              (get-document-with-term r id))
+             (T
+              (get-document r id)))))
+    ;; If reader is supplied, we assume that the caller already has the lock
+    (if reader
+        (get-it reader)
+        (with-reader (self)
+          (get-it reader)))))
 
 (defun make-field-value-query (field value)
   (let ((query (make-instance 'boolean-query)))
@@ -484,278 +577,284 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
 (defmethod make-key-field-query ((index index) keyvalue)
   (make-field-value-query (document-key index) keyvalue))
 
-#|
 (defmethod delete-document ((self index) id)
-  (let ((reader (reader self)))
-    (let ((count (cond ((stringp id)
-                        (let ((term (make-term "id" id)))
-                          (delete-docs-with-term reader term)))
-		       ((typep id 'term)
-			(delete-docs-with-term reader id))
-		       ((integerp id)
-			(delete-document reader id))
-		       (T
-			(error "Can't delete for id ~S" id)))))
-      (when (slot-value self 'auto-flush-p)
-	(flush self))
-      count)))
-|#
-
-(defmethod delete-document ((self index) id)
-  (let ((reader (reader self)))
+  (with-modifier
+   (self)
+    (flush-metadata self)
     (let ((count (typecase id
                    (string
-                    (let ((term (make-term "id" id)))
-                      (delete-from-cache self term)
-                      (delete-docs-with-term reader term)))
+                    ;;(delete-from-cache self id)
+                    (delete-docs-with-term modifier (make-term "id" id)))
                    (term
-                    (delete-from-cache self id)
-                    (delete-docs-with-term reader id))
+                    ;;(delete-from-cache self id)
+                    (delete-docs-with-term modifier id))
                    (integer
-                    (delete-from-cache self id)
-                    (delete-document reader id))
+                    ;;(delete-from-cache self id)
+                    (delete-document modifier id))
                    (T
                     (error "Can't delete for id ~S" id)))))
       (when (slot-value self 'auto-flush-p)
-	(flush self))
+        (flush self))
       count)))
 
 (defgeneric query-delete (index query))
 
 (defmethod query-delete ((self index) query)
-  (let ((reader (reader self))
-	(searcher (searcher self))
-        (query (process-query self query)))
-    (search-each searcher query
-		 #'(lambda (doc score)
-		     (declare (ignore score))
-		     (delete-document reader doc)))
-    (when (slot-value self 'auto-flush-p)
-      (flush self))))
+  (with-modifying-searcher (self)
+    (let ((reader (reader searcher))
+          (query (process-query self query)))
+      (search-each searcher query
+                   #'(lambda (doc score)
+                       (declare (ignore score))
+                       (delete-document reader doc)))
+      (when (slot-value self 'auto-flush-p)
+        (flush self)))))
 
 (defmethod deleted-p ((self index) n)
-  (deleted-p (reader self) n))
+  (with-reader (self)
+    (deleted-p reader n)))
 
 (defgeneric update (index id new-val))
 
 (defmethod update ((self index) id new-val)
-  (with-slots (options) self
+  (with-slots (options) self ; index-lock) self
     (cond ((stringp id)
-	   ;; FIXME: how about using a pre-parsed form of query?
-	   (query-update self (format nil "id:~A" id) new-val))
-	  ((typep id 'term)
-	   (query-update self
-			 (make-instance 'term-query
-					:term id)
-			 new-val))
-	  ((integerp id)
-	   (let ((reader (reader self))
-		 (document (get-document self id)))
-	     (when (listp new-val)
-	       (setf new-val (convert-alist-to-table new-val)))
-	     (cond ((table-like-p new-val)
-		    (dolist (name (table-keys new-val))
-		      (let ((content (table-value new-val name)))
-			(setf (document-values document name) (string content)))))
-		   ((typep new-val 'document)
-		    (setf document new-val))
-		   (T
-		    (setf (document-values document (get-index-option options :default-field))
-			  (string new-val))))
-	     (delete-document reader id)
-	     (let ((writer (writer self)))
-	       (add-document-to-index-writer writer document))))
-	  (T
-	   (error "Cannot update for id ~S" id)))
+           ;; FIXME: how about using a pre-parsed form of query?
+           (query-update self (format nil "id:~A" id) new-val))
+          ((typep id 'term)
+           (query-update self
+                         (make-instance 'term-query
+                                        :term id)
+                         new-val))
+          ((integerp id)
+           (let ((document (get-document self id)))
+             (with-write-lock ((index-lock self))
+               (with-modifier (self)
+                 (when (listp new-val)
+                   (setf new-val (convert-alist-to-table new-val)))
+                 (cond ((table-like-p new-val)
+                        (dolist (name (table-keys new-val))
+                          (let ((content (table-value new-val name)))
+                            (setf (document-values document name) (string content)))))
+                       ((typep new-val 'document)
+                        (setf document new-val))
+                       (T
+                        (setf (document-values document (get-index-option options :default-field))
+                              (string new-val))))
+                 (delete-document modifier id))
+               (with-writer (self)
+                 (add-document-to-index-writer writer document))
+               (when (slot-value self 'auto-flush-p)
+                 (flush self)))))
+          (T
+           (error "Cannot update for id ~S" id)))
     (when (slot-value self 'auto-flush-p)
       (flush self))))
 
 (defgeneric query-update (index query new-val))
 
 (defmethod query-update ((self index) query new-val)
-  (let ((searcher (searcher self))
-	(reader (reader self))
-	(docs-to-add '())
-	;;(query (parsed-query (process-query self query)))) ; don't need sort
-	(query (process-query self query))) ; don't need sort
-    (search-each searcher query
-		 #'(lambda (id score)
-		     (declare (ignore score))
-		     (let ((document (get-document self id)))
-		       (when (listp new-val)
-			 (setf new-val (convert-alist-to-table new-val)))
-		       (cond ((table-like-p new-val)
-			      (dolist (name (table-keys new-val))
-				(let ((content (table-value new-val name)))
-				  (setf (document-values document name) (string content)))))
-			     ((typep new-val 'document)
-			      (setf document new-val))
-			     (T
-			      (setf (document-values document (get-index-option (slot-value self 'options) :default-field))
-				    (string new-val))))
-		       (push document docs-to-add)
-		       (delete-document reader id))))
-    (let ((writer (writer self)))
-      (dolist (doc (reverse docs-to-add))
-	(add-document-to-index-writer writer doc))
-      (when (slot-value self 'auto-flush-p)
-	(flush self)))))
+  (let ((docs-to-add '()) (doc-ids-to-delete '()))
+    (with-write-lock ((index-lock self))
+      (with-modifying-searcher (self)
+        (let ((reader (reader searcher))
+              (query (process-query self query)))
+          (search-each
+           searcher
+           query
+           #'(lambda (id score)
+               (declare (ignore score))
+               (let ((document (get-document self id :reader (reader searcher))))
+                 (when (listp new-val)
+                   (setf new-val (convert-alist-to-table new-val)))
+                 (cond ((table-like-p new-val)
+                        (dolist (name (table-keys new-val))
+                          (let ((content (table-value new-val name)))
+                            (setf (document-values document name)
+                                  (string content)))))
+                       ((typep new-val 'document)
+                        (setf document new-val))
+                       (t
+                        (setf (document-values document
+                                               (get-index-option
+                                                (slot-value self 'options)
+                                                :default-field))
+                              (string new-val))))
+                 (push document docs-to-add)
+                 (push id doc-ids-to-delete))))
+          (dolist (id (reverse doc-ids-to-delete))
+            (delete-document reader id))))
+      (with-writer (self)
+        (dolist (doc (reverse docs-to-add))
+          (add-document-to-index-writer writer doc))
+        (when (slot-value self 'auto-flush-p)
+          (flush self))))))
 
+;; FIXME: locks; called by readers who probably already have the read lock. ugh.
 (defmethod has-deletions-p ((self index))
   (has-deletions-p (reader self)))
 
 (defgeneric has-writes (index))
 
 (defmethod has-writes ((self index))
-  (slot-value self 'has-writes))
+  (slot-value self 'has-writes-p))
 
+(defmethod close-all-readers ((self index))
+  (with-slots (readers readers-lock) self
+    (bordeaux-threads:with-recursive-lock-held (readers-lock)
+      (loop while (not (empty-queue-p readers)) do
+           (let ((reader (dequeue readers)))
+             (when reader (close-down reader)))))))
+
+;; FIXME: locks
 (defmethod flush ((self index))
-  (with-slots (reader writer searcher) self
-    (when reader (close-down reader))
-    (when writer (close-down writer))
-    (setf reader nil
-	  writer nil
-	  searcher nil)))
+  (with-slots (readers writer searcher readers-lock) self
+    (with-write-lock ((index-lock self))
+      (bordeaux-threads:with-recursive-lock-held (readers-lock)
+        (close-all-readers self)
+        (when writer (close-down writer))
+        (setf readers (make-queue)
+              writer nil
+              searcher nil)))))
 
+;; FIXME: locks
 (defmethod optimize-index ((self index))
-  (optimize-index (writer self))
-  (flush self))
+  (with-write-lock ((index-lock self))
+    (optimize-index (writer self))
+    (flush self)))
 
+;; FIXME: locks
 (defmethod size ((self index))
-  (num-docs (reader self)))
+  (with-reader (self)
+    (num-docs reader)))
 
+;; FIXME: locks
 (defmethod add-indexes ((self index) &rest indexes)
   (when (> (length indexes) 0)
     (when (typep (elt indexes 0) 'index)
-      (setf indexes (map 'vector #'reader indexes)))
-    (cond ((typep (elt indexes 0) 'index-reader)
-	   (let ((reader (reader self)))
-	     (setf indexes (remove reader indexes)))
-	   (add-indexes-readers (writer self) indexes))
-	  ((typep (elt indexes 0) 'virtual-directory)
-	   (setf indexes (remove (slot-value self 'dir) indexes))
-	   (apply #'add-indexes (writer self) indexes))
-	  (T
-	   (error "Unknown index type ~S when trying to merge indexes." (elt indexes 0))))))
+      (setf indexes (map 'list #'reader indexes)))
+    (with-writer (self)
+      (cond ((typep (elt indexes 0) 'index-reader)
+             (let ((reader (reader self)))
+               (setf indexes (remove reader indexes)))
+             (add-indexes-readers writer indexes))
+            ((typep (elt indexes 0) 'virtual-directory)
+             (setf indexes (remove (slot-value self 'dir) indexes))
+             (apply #'add-indexes writer indexes))
+            (T
+             (error "Unknown index type ~S when trying to merge indexes."
+                    (elt indexes 0)))))))
 
 (defgeneric persist (index directory &key create-p))
 
+;; FIXME: locks
 (defmethod persist ((self index) directory &key (create-p T))
-  (flush self)
-  (with-slots (dir options) self
-    (let ((old-dir dir))
-      (etypecase directory
-	((or string pathname)
-	 (setf dir (make-fs-directory directory :create-p create-p))
-	 (setf (get-index-option options :close-directory-p) T))
-	(virtual-directory
-	 (setf dir directory)))
-      (ensure-writer-open self)
-      (add-indexes (writer self) old-dir))))
+  (with-write-lock ((index-lock self))
+    (flush self)
+    (with-slots (dir options) self
+      (let ((old-dir dir))
+        (etypecase directory
+          ((or string pathname)
+           (setf dir (make-fs-directory directory :create-p create-p))
+           (setf (get-index-option options :close-directory-p) T))
+          (virtual-directory
+           (setf dir directory)))
+        (ensure-writer-open self)
+        (add-indexes (writer self) old-dir)))))
 
 (defgeneric ensure-writer-open (index))
 
 (defmethod ensure-writer-open ((self index))
-  (with-slots (open-p writer reader dir options searcher) self
+  ;; We assume that anyone calling this already has the write lock
+  (with-slots (open-p writer dir options) self
     (unless open-p
       (error "Tried to use a closed index."))
     (unless writer
-      (when reader
-	(close-down reader)
-	(setf reader nil
-	      searcher nil))
+      (close-all-readers self)
       (setf writer (apply #'make-instance 'index-writer
 				  :directory dir
 				  options)))))
 
 (defgeneric ensure-reader-open (index))
 
+(defmethod release-reader ((self index) (reader index-reader))
+  (bordeaux-threads:with-recursive-lock-held ((readers-lock self))
+    ;;(close-down reader)
+    (setf (in-use-readers self)
+          (remove reader (in-use-readers self)))
+    (enqueue (readers self) reader))
+  (bt-semaphore:signal-semaphore (readers-semaphore self) 1))
+
+(defmethod release-modifying-reader ((self index) (reader index-reader))
+  (bordeaux-threads:with-recursive-lock-held ((readers-lock self))
+    ;;(close-down reader)
+    (setf (in-use-readers self)
+          (remove reader (in-use-readers self)))
+    (close-down reader))
+  (bt-semaphore:signal-semaphore (readers-semaphore self) 1))
+
+(defmethod get-reader ((self index))
+  (with-slots (in-use-readers dir readers-semaphore) self
+    (when (bt-semaphore:wait-on-semaphore readers-semaphore)
+      (bordeaux-threads:with-recursive-lock-held ((readers-lock self))
+        (let ((reader (dequeue (readers self))))
+          (when (or (null reader) (and reader (not (latest-p reader))))
+           (setq reader
+                  (open-index-reader dir
+                                     :close-directory-p NIL
+                                     :id (next-reader-id))))
+          (push reader in-use-readers)
+          reader)))))
+
 (defmethod ensure-reader-open ((self index))
-  (with-slots (open-p writer reader dir) self
+  (with-slots (open-p) self
     (unless open-p
       (error "Tried to use a closed index."))
-    (if reader
-	(if (not (latest-p reader))
-	  (setf reader (open-index-reader dir :close-directory-p NIL))
-	  NIL)
-	(progn
-	  (when writer
-	    (close-down writer)
-	    (setf writer nil))
-	  (setf reader (open-index-reader dir :close-directory-p NIL))))))
+    (get-reader self)))
 
+#|
+REANZ1959 I think the version using get-reader is best.
+(defmethod ensure-reader-open ((self index))
+  (with-slots (open-p) self
+    (unless open-p
+      (error "Tried to use a closed index."))
+    (gethash (bordeaux-threads:current-thread) (readers self))))
+|#
+
+#|
+REANZ1959 no, no, no reader slot doesn't exist.
+(defmethod ensure-reader-open ((self index))
+  (with-slots (open-p reader) self
+    (unless open-p
+      (error "Tried to use a closed index."))
+    reader))
+|#
+	
 (defgeneric index-path (index))
 
 (defmethod index-path ((self index))
-  (and (slot-boundp self 'dir)
-       (slot-value self 'dir)
-       (slot-value (slot-value self 'dir) 'path)))
- 
+  (slot-value (slot-value self 'dir) 'path))
+
 (defun index-write-date (index)
-  (let ((path (index-path index)))
-    (if path 
-        (file-write-date (merge-pathnames path "segments")))))
-
-(defmethod index-keys-metadata-path ((index index))
-  (let ((path (index-path index)))
-    (if path
-        (merge-pathnames "metadata-keys.dat" path))))
-
-(defun metadata-up-to-date (index)
-  (let* ((metadata-path (index-keys-metadata-path index))
-         (timestamp (and metadata-path (file-write-date metadata-path))))
-    (and metadata-path
-         timestamp
-         (> (size index) 0)
-         (if (probe-file metadata-path)
-             (latest-p (reader index))
-             (<= (index-write-date index) timestamp)))))
-
-(defmethod is-ram-directory ((dir ram-directory))
-  t)
-
-(defmethod is-ram-directory ((dir t))
-  nil)
-
-(defmethod is-ram-directory ((index index))
-  (is-ram-directory (slot-value index 'dir)))
-
-(defmethod metadata-table ((index index))
-  (unless (is-ram-directory index)
-    (let ((metadata (metadata index)))
-      (unless metadata
-        (with-slots (metadata-cache) index
-          (let ((maxdocs (max-doc (searcher index))))
-            (setf metadata (make-hash-table :test #'equal))
-            (format t "~%;; Building metadata cache" *standard-output*)
-            (loop
-             for docnum from 0 upto (1- maxdocs)
-             unless (deleted-p index docnum) do
-             ;;(format t "metadata-table docnum ~d~%" docnum)
-             (add-to-cache index metadata docnum))
-            (setf metadata-cache (trivial-garbage:make-weak-pointer metadata)))))
-      (values metadata (hash-table-count metadata)))))
-
-(defun metadata-vector (index)
-  (unless (is-ram-directory index)
-    (let ((table (metadata-table index))
-          (records (make-array (size index) :element-type 'list :fill-pointer 0 :adjustable t)))
-      (loop for value being the hash-value of table do
-            (vector-push-extend value records))
-      (sort records #'string-lessp :key #'cadr)))) ; sort by key value
+  (file-write-date (merge-pathnames (index-path index) "segments")))
 
 (defmethod ensure-searcher-open ((self index))
-  (with-slots (open-p searcher reader) self
+  (with-slots (open-p) self
     (unless open-p
       (error "Tried to use a closed index."))
-    (when (or (ensure-reader-open self) (not searcher))
-      (setf searcher (make-instance 'index-searcher :reader reader)))))
+    (let ((reader (reader self)))
+      ;;(when (null reader)
+      ;;  (setq reader (ensure-reader-open self)))
+      ;;(when (not searcher)
+      ;;  (setf searcher (make-instance 'index-searcher :reader reader))))))
+      (make-instance 'index-searcher :reader reader))))
 
 (defgeneric do-search (index query options))
 
 (defmethod do-search ((self index) query options)
-  (let ((pqr (process-query self query)))
-    (apply #'search-index (searcher self) pqr options))) ; this method is in the search/index-searcher
+  (with-searcher (self)
+    (let ((pqr (process-query self query)))
+      (apply #'search-index searcher pqr options))))
 
 (defgeneric fetch-field-value (index doc name))
 
@@ -799,21 +898,22 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
                    :allow-other-keys T
                    :language language
                    :default-field default-search-field
-                   :index index
                    :field-definitions (field-definitions index))))
 
 (defgeneric process-query (index query))
 
-(defmethod process-query ((self index) query)
-  (if (stringp query)
-      (with-slots (qp) self
-        (setf qp (make-parser-with-index self))
-        (montezuma-parse qp query))
-    query))
+(defmethod process-query ((self index) (query t))
+  query)
+
+(defmethod process-query ((self index) (query string))
+  (with-slots (qp) self
+    (setf qp (make-parser-with-index self))
+    (montezuma-parse qp query)))
 
 (defun compiled-query (index input)
   (montezuma-parse (make-parser-with-index index) input))
 
+;; FIXME: locks
 (defmethod rewrite-query ((index index) query)
   (rewrite (query (compiled-query index query)) (reader index)))
 
@@ -829,26 +929,26 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
                :must-occur)
     query))
 
-(defun get-document-field (index docnum field)
-  (handler-case
-      (unless (deleted-p index docnum)
-        (let ((doc (get-document index docnum)))
-          (if doc (field-data (document-field doc field)))))
-    (t nil)))
-
 (defmethod all-field-values ((index index) field)
-  (when (and field (setf field (normalised-field-name index field)))
-    (or (gethash field (field-values-cache index))
-        (let* ((maxdocs (max-doc (searcher index)))
-               (results
-                (loop
-                 for docnum from 0 upto (1- maxdocs)
-                 unless (deleted-p index docnum)
-                 collect (field-data (document-field (get-document index docnum) field)))))
-          (setf results (sort results #'string-lessp))
-          (setf (gethash field (field-values-cache index)) results)
-          results))))
-#|
+  (when field
+    (setf field (normalised-field-name index field))
+    (let ((keys (gethash field (field-values-cache index))))
+      (unless keys
+        (search-each
+         index
+         (wildcard-query index field "*")
+         #'(lambda(docnum score)
+             (declare (ignore score))
+             (let ((value (fetch-field-value index docnum field)))
+               (unless (or (null value)
+                           (string= "" value)
+                           (find value keys :test #'string=))
+                 (push value keys))))
+         `(:num-docs ,(size index) :first-doc 0))
+        (setf keys (sort keys #'string-lessp))
+        (setf (gethash field (field-values-cache index)) keys))
+      keys)))
+
 (defclass document-metadata ()
   ((docnum :type integer :initarg :docnum :accessor docnum)
    (key :type string :initarg :key :accessor key)
@@ -856,9 +956,7 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
    (author :type string :initarg :author :accessor author :initform "")
    (language :type string :initarg :language :accessor language :initform "")
    ))
-|#
 
-#|
 (defmethod print-object ((self document-metadata) stream)
   (print-unreadable-object (self stream :type T :identity T)
     (format stream " docnum: ~d" (docnum self))
@@ -866,82 +964,23 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
     (format stream " title: ~s" (title self))
     (format stream " author: ~s" (author self))
     (format stream " language: ~s" (language self))))
-|#
 
-#|
-(defmethod tip ((record document-metadata))
+(defun tip (record)
   (with-slots (title author language) record
-    (with-output-to-string (stream)
-      (if title (princ title stream))
-      (when author (format stream " by ~a" author))
-      (when language (format stream " [~a]" language)))))
-|#
+    (cond
+     ((and title author language)
+      (format nil "~a by ~a (~a)" title author language))
+     ((and title author)
+      (format nil "~a by ~a" title author))
+     (title
+      (format nil "~a" title))
+     (t ""))))
 
-#|
-(defun make-document-metadata (docnum key title author &optional language) 
+(defun make-document-metadata (docnum key title author &optional language)
   (make-instance 'document-metadata :docnum docnum :key key :title title :author author :language language))
-|#
-(defmethod cached ((index t) (field string))
-  (and *cache-enabled*
-       index
-       (not (is-ram-directory index))
-       (string-equal (document-key index) field)))
-
-(defmethod delete-from-cache ((index index) (term string))
-  (let ((table (metadata-table index)))
-    (if table
-        (remhash term table))))
-
-(defmethod delete-from-cache ((index index) (docnum integer))
-  (let ((table (metadata-table index)))
-    (if table
-        (let* ((doc (get-document index docnum))
-               (field (document-key index))
-               (keyvalue (if field (field-data (document-field doc field)))))
-          (if keyvalue
-              (remhash (string-downcase keyvalue) table))))))
-
-(defmethod delete-from-cache ((index index) (term term))
-  (let ((table (metadata-table index)))
-    (if table
-        (let ((query (make-instance 'term-query :term term :index index)))
-          (dolist (docnum (get-document-numbers index query))
-            (delete-from-cache index docnum))))))
-
-(defmethod add-to-cache ((index index) table docnum)
-  (let* ((doc (get-document index docnum))
-         (field-names (all-field-names doc)))
-    (flet ((extract (name)
-             (if (find name field-names :test #'string-equal)
-                 (field-data (document-field doc name)))))
-      (let* ((key (extract (document-key index)))
-             (entry-key (string-downcase key)))
-        (setf (gethash entry-key table)
-              `(,@(gethash entry-key table)
-                ,(list docnum key (extract "title") (extract "author") (extract "language"))))))))
-
-(defmethod metadata ((index t))
-  (break "index is nil")
-  nil)
-
-(defmethod metadata ((index index))
-  "Are we caching metadata?"
-  (if *cache-enabled*
-      (let ((metadata (metadata-cache index)))
-        (and metadata
-             (trivial-garbage:weak-pointer-p metadata)
-             (trivial-garbage:weak-pointer-value metadata)))))
-         
-(defmethod key-term-frequency ((index index) (text string))  
-  (let ((cache (metadata index)))
-    (if cache (length (gethash (string-downcase text) cache)))))
-
-(defmethod key-term-documents ((index index) (text string))
-  (let ((cache (metadata index)))
-    (if cache (mapcar #'first (gethash (string-downcase text) cache)))))
 
 (defun get-document-number (index query)
-  (search-each 
+  (search-each
    index query
    #'(lambda (docnum score)
        (declare (ignore score))
@@ -956,22 +995,197 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
          (declare (ignore score))
          (push docnum docs)))
     docs))
-  
+
 (defun get-document-number-from-query (index keyvalue)
   (let ((query (make-field-value-query (document-key index) (or keyvalue ""))))
-    (search-each 
+    (search-each
      index query
      #'(lambda (docnum score)
          (declare (ignore score))
          (return-from get-document-number-from-query docnum)))
     -1))
 
+(defmethod key-term-documents ((index index) (text string))
+  (let ((cache (metadata index)))
+    (if cache (mapcar #'first (gethash (string-downcase text) cache)))))
+
+(defmethod key-term-frequency ((index index) (text string))  
+  (let ((cache (metadata index)))
+    (if cache (length (gethash (string-downcase text) cache)))))
+
+(defmethod search-document-and-scores ((index index) query)
+  (let ((results ()))
+    (search-each
+     (searcher index) query
+     #'(lambda(docnum score) (push (list docnum score) results)))
+    results))
+
+(defmethod search-for-keyvalue ((index index) (keyvalue string))
+  (search-document-and-scores index (make-key-field-query index keyvalue)))
+
+(defmethod metadata-path ((index index))
+  (let ((path (index-path index)))
+    (if path
+        (merge-pathnames "document-metadata.dat" path))))
+
+(defun metadata-up-to-date (index)
+  (let* ((path (metadata-path index))
+         (timestamp (if path (file-write-date path))))
+    (and path
+         timestamp
+         (> (size index) 0)
+         (if (probe-file path)
+             (latest-p (reader index))
+             (<= (index-write-date index) timestamp)))))
+
+(defmethod is-ram-directory ((dir ram-directory))
+  t)
+
+(defmethod is-ram-directory ((dir t))
+  nil)
+
+(defmethod is-ram-directory ((index index))
+  (is-ram-directory (dir index)))
+
+#|
+;; May want to reinstate these methods when the locking has been proven.
+
+(defmethod delete-from-cache ((index index) (term string))
+  (let ((table (metadata-table index)))
+    (if table
+        (remhash (string-downcase term) table))))
+
+(defmethod delete-from-cache ((index index) (docnum integer))
+  (let ((keyfield  (document-key index)))
+    (if keyfield
+        (let ((table (metadata-table index)))
+          (if table
+              (let* ((doc (get-document index docnum))
+                     (keyvalue (field-data (document-field doc keyfield))))
+                (if keyvalue
+                    (remhash (string-downcase keyvalue) table))))))))
+
+(defmethod delete-from-cache ((index index) (term term))
+  (let ((keyfield (document-key index)))
+    (if keyfield
+	(let ((table (metadata-table index)))
+          (if table
+              (let ((query (make-instance 'term-query :term term :index index)))
+                (dolist (docnum (get-document-numbers index query))
+                  (delete-from-cache index docnum))))))))
+
+|#
+
+(defmethod metadata ((index t))
+  nil)
+
+(defmethod flush-metadata ((self index))
+  (setf (metadata-cache self) nil)
+  (let ((path (index-keys-metadata-path self)))
+    (if (probe-file path)
+        (delete-file path))))
+
+(defmethod cached ((index t) &optional field)
+  (and *cache-enabled*
+       index
+       (not (is-ram-directory index))
+       (document-key index)
+       (or (null field)
+           (string-equal (document-key index) field))))
+
+(defmethod metadata ((index index))
+  "Are we caching metadata?"
+  (if (cached index)
+      (values t
+              (let ((metadata (metadata-cache index)))
+                (and metadata
+                     (trivial-garbage:weak-pointer-p metadata)
+                     (trivial-garbage:weak-pointer-value metadata))))))
+
+(defmethod add-to-cache ((index index) table docnum reader)
+  ;; add a document identifie by its docnum to the cache
+  (let* ((doc (get-document index docnum :reader reader))
+         (field-names (all-field-names doc)))
+    (flet ((extract (name)
+             (if (find name field-names :test #'string-equal)
+                 (let ((value (field-data (document-field doc name))))
+                   (if value (string-trim '(#\space) value))))))
+      (let* ((key (extract (document-key index)))
+             (entry-key (string-downcase key)))
+        (setf (gethash entry-key table)
+              `(,@(gethash entry-key table)
+                ,(list docnum key (extract "title") (extract "author") (extract "language"))))))))
+
+(defun read-metadata (path table)
+  (with-open-file (mdin path)
+    (loop
+     for md across (read mdin nil nil)
+     as key = (cadr md) do
+     (push md (gethash (string-downcase key) table)))))
+
+(defun write-metadata (path table)
+  (let ((records (make-array (hash-table-count table) :element-type 'list :fill-pointer 0 :adjustable t)))
+    (loop for list-of-records being the hash-value of table do
+          (dolist (record list-of-records)
+            (vector-push-extend record records)))
+    (with-open-file (mdout path :direction :output :if-exists :supersede)
+      (write records :stream mdout :escape t :readably t))))
+
+(defmethod metadata-table ((index index))
+  (multiple-value-bind (caching metadata) (metadata index)
+    (let ((path (metadata-path index)))
+      (when caching
+        (or metadata
+            (let ((table (make-hash-table :test #'equal)))
+              (cond
+               ((metadata-up-to-date index)
+                (read-metadata path table))
+               (t
+                (let ((maxdocs (max-doc (searcher index))))
+                  (with-reader (index)
+                    (format t "~%;; Building metadata cache" *standard-output*)
+                    (loop
+                     for docnum from 0 below maxdocs
+                     unless (deleted-p reader docnum) do
+                     (add-to-cache index table docnum reader))
+                    (write-metadata path table)
+                    (setf (metadata-cache index) (trivial-garbage:make-weak-pointer table))))))
+              table))))))
+
+(defun metadata-vector (index)
+  "Return an array of document metadata sorted by key values, or nil if no document key"
+  (multiple-value-bind (caching metadata) (metadata index)
+    (with-reader (index)
+      (when caching
+        (setf metadata (metadata-table index))
+        (let ((records (make-array (num-docs reader) :element-type 'list :fill-pointer 0 :adjustable t)))
+          (loop for list-of-records being the hash-value of metadata do
+                (dolist (record list-of-records)
+                  (vector-push-extend record records)))
+          (sort records #'string-lessp :key #'cadr)))))) ; sort by key value
+
+(defun stress (index &key cache)
+  (let ((keys ())
+        (key (slot-value index 'document-key))
+        (table (metadata-table index)))
+    (dotimes (n 1000)
+      (let* ((docnum (random (1- (size index))))
+             (doc (get-document index docnum)))
+        (push (get-document-field-data doc key) keys)))
+    (setf *cache-enabled* cache)
+    (time
+     (dolist (keyvalue keys)
+       ;;(format t "~s~%" (search-for-keyvalue index keyvalue))))))
+       (exists-p index (make-instance 'key-term-query :term (make-term key keyvalue) :index index))))
+    table))
+
+
 #|
 (defparameter pastes
   (make-instance
    'index
-   :path (merge-pathnames "contrib/pastes-1000/pasteindex" cl-user::*montezuma-root*)
-   :document-root (merge-pathnames "contrib/pastes-1000/pastes.sexp" cl-user::*montezuma-root*)
+   :path (merge-pathnames "contrib/pastes-1000/pasteindex" *montezuma-root*)
+   :document-root (merge-pathnames "contrib/pastes-1000/pastes.sexp" ^montezuma-root*)
    :title "1000 documents submitted to lisppastes"
    :document-key "number"
    :create-p NIL
@@ -993,18 +1207,20 @@ Unless uniqueness, allow duplicate keys. When uniqueness but not overwrite, don'
      ("contents" :stored t :index :tokenized :height 20 :width 80 :blockquote t :linebreaks t :preformatted t))))
 |#
 
-(defun stress (index &key cache)
-  (let ((keys ())
-        (key (slot-value index 'document-key))
-        (table (metadata-table index)))
-    (dotimes (n 1000)
-      (let* ((docnum (random (1- (size index))))
-             (doc (get-document index docnum)))
-        (push (get-document-field-data doc key) keys)))
-    (setf *cache-enabled* cache)
-    (time
-     (dolist (keyvalue keys)
-       ;;(format t "~s~%" (search-for-keyvalue index keyvalue))))))
-       (exists-p index (make-instance 'key-term-query :term (make-term key keyvalue) :index index))))
-    table))
- 
+#|
+(defmethod get-document-number-for-key ((index index) value)
+  (let ((record (gethash (string-upcase value) (keys-table index))))
+    (if record
+        (docnum record)
+      -1)))
+  ;;(get-document-number-from-query index value))
+
+(defmethod get-key-for-number ((index index) docnum)
+  (let ((record (gethash docnum (keys-table index))))
+    (if record
+        (key record))))
+
+    (let ((doc (mtz:get-document index docnum)))
+    (values (fetch-field-value index doc (document-key index))
+            doc)))
+|#
