@@ -1079,11 +1079,20 @@ REANZ1959 no, no, no reader slot doesn't exist.
 (defmethod metadata ((index t))
   nil)
 
+#|
 (defmethod flush-metadata ((self index))
   (setf (metadata-cache self) nil)
   (let ((path (metadata-path self)))
     (if (probe-file path)
         (delete-file path))))
+|#
+
+(defmethod flush-metadata ((self index))
+  (when (cached self)
+    (setf (metadata-cache self) nil)
+    (let ((path (metadata-path self)))
+      (if (probe-file path)
+          (delete-file path)))))
 
 (defmethod cached ((index t) &optional field)
   (and *cache-enabled*
