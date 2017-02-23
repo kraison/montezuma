@@ -36,6 +36,9 @@
   (declare (ignore reader))
   self)
 
+(defmethod required? ((self query))
+  (eq (occur self) :must-occur))
+
 (defmethod similarity-implementation ((self query) searcher)
   (similarity searcher))
 
