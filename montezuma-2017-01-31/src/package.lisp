@@ -201,4 +201,15 @@
    #:parent
    #:token-frequencies
    #:abstract-document
+      
+   #:fetch-field-value
+   #:key-term-query
+   #:precis
+   #:annotate
+   #:metadata-vector
+   #:document-digest
+   #:make-document-order-sort-field
+   #:delete-docs-with-term
+   #:porter-analyzer
+
 ))
