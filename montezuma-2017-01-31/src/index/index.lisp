@@ -1033,9 +1033,9 @@ REANZ1959 no, no, no reader slot doesn't exist.
          (timestamp (if path (file-write-date path))))
     (and path
          timestamp
-         (> (size index) 0)
+         ;;(> (size index) 0)
          (if (probe-file path)
-             (latest-p (reader index))
+             ;;(latest-p (reader index))
              (<= (index-write-date index) timestamp)))))
 
 (defmethod is-ram-directory ((dir ram-directory))
@@ -1112,15 +1112,14 @@ REANZ1959 no, no, no reader slot doesn't exist.
                      (trivial-garbage:weak-pointer-value metadata))))))
 
 (defmethod add-to-cache ((index index) table docnum reader)
-  ;; add a document identifie by its docnum to the cache
+  ;; add a document identified by its docnum to the cache
   (let* ((doc (get-document index docnum :reader reader))
          (field-names (all-field-names doc)))
     (flet ((extract (name)
              (if (find name field-names :test #'string-equal)
-                 (let ((value (field-data (document-field doc name))))
-                   (if value (string-trim '(#\space) value))))))
-      (let* ((key (extract (document-key index)))
-             (entry-key (string-downcase key)))
+                 (field-data (document-field doc name)))))
+      (let* ((key (string-trim '(#\space) (extract (document-key index))))
+             (entry-key  (string-downcase key)))
         (setf (gethash entry-key table)
               `(,@(gethash entry-key table)
                 ,(list docnum key (extract "title") (extract "author") (extract "language"))))))))
@@ -1151,11 +1150,12 @@ REANZ1959 no, no, no reader slot doesn't exist.
                 (read-metadata path table))
                (t
                 (let ((maxdocs (max-doc (searcher index))))
+                  (format *error-output* "~%;; Building metadata cache")
                   (with-reader (index)
-                    (format t "~%;; Building metadata cache" *standard-output*)
                     (loop
                      for docnum from 0 below maxdocs
                      unless (deleted-p reader docnum) do
+                     (princ #\* *error-output*)
                      (add-to-cache index table docnum reader))
                     (write-metadata path table)
                     (setf (metadata-cache index) (trivial-garbage:make-weak-pointer table))))))
@@ -1164,29 +1164,29 @@ REANZ1959 no, no, no reader slot doesn't exist.
 (defun metadata-vector (index)
   "Return an array of document metadata sorted by key values, or nil if no document key"
   (multiple-value-bind (caching metadata) (metadata index)
-    (with-reader (index)
-      (when caching
-        (setf metadata (metadata-table index))
-        (let ((records (make-array (num-docs reader) :element-type 'list :fill-pointer 0 :adjustable t)))
-          (loop for list-of-records being the hash-value of metadata do
-                (dolist (record list-of-records)
-                  (vector-push-extend record records)))
-          (sort records #'string-lessp :key #'cadr)))))) ; sort by key value
+    (when caching
+      (setf metadata (metadata-table index))
+      (let ((records (make-array (hash-table-count metadata) :element-type 'list :fill-pointer 0 :adjustable t)))
+        (loop for list-of-records being the hash-value of metadata do
+              (dolist (record list-of-records)
+                (vector-push-extend record records)))
+        (sort records #'string-lessp :key #'cadr))))) ; sort by key value
 
 (defun stress (index &key cache)
-  (let ((keys ())
-        (key (slot-value index 'document-key))
-        (table (metadata-table index)))
-    (dotimes (n 1000)
-      (let* ((docnum (random (1- (size index))))
-             (doc (get-document index docnum)))
-        (push (get-document-field-data doc key) keys)))
-    (setf *cache-enabled* cache)
-    (time
-     (dolist (keyvalue keys)
-       ;;(format t "~s~%" (search-for-keyvalue index keyvalue))))))
-       (exists-p index (make-instance 'key-term-query :term (make-term key keyvalue) :index index))))
-    table))
+  (with-reader (index)
+    (let ((keys ())
+          (key (slot-value index 'document-key))
+          (table (metadata-table index)))
+      (dotimes (n 1000)
+        (let* ((docnum (random (1- (size index))))
+               (doc (get-document index docnum reader)))
+          (push (get-document-field-data doc key) keys)))
+      (setf *cache-enabled* cache)
+      (time
+       (dolist (keyvalue keys)
+         ;;(format t "~s~%" (search-for-keyvalue index keyvalue))))))
+         (exists-p index (make-instance 'key-term-query :term (make-term key keyvalue) :index index))))
+      table)))
 
 
 #|
