@@ -61,6 +61,33 @@ not for STRING."
   (let ((m (mismatch string pattern :test #'char=)))
     (or (null m) (= m (length pattern)))))
 
+(defun string-ends (string pattern)
+  "Determine whether `string ends with pattern`"
+  (let ((p (mismatch pattern string :from-end t)))
+    (or (not p) (= 0 p))))
+
+(defun string-contains (string pattern)
+  "Determine whether `string contains `pattern.
+   Return a list of starting locations for every occurence of pattern in `string`"
+   (unless (string= pattern "")
+     (loop for p = (search pattern string) then (search pattern string :start2 (1+ p))
+           while p 
+           collect p)))
+ 
+(defun greedy-wrap (str width)
+  (unless (string-ends str " ")
+    (setf str (concatenate 'string str " "))) ; sentinel
+  ;;(setf str (format nil "~a " str)) ; sentinel
+  (do* ((len (length str))
+        (lines nil)
+        (begin-curr-line 0)
+        (prev-space 0 pos-space)
+        (pos-space (position #\space str) (when (< (1+ prev-space) len) (position #\space str :start (1+ prev-space)))))
+       ((null pos-space) (progn (push (subseq str begin-curr-line (1- len)) lines) (nreverse lines)))
+    (when (> (- pos-space begin-curr-line) width)
+      (push (subseq str begin-curr-line prev-space) lines)
+      (setq begin-curr-line (1+ prev-space)))))
+
 (defun trim (str)
   (string-trim '(#\Space #\Newline #\Return #\Tab) str))
 
